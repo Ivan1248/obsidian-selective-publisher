@@ -221,7 +221,7 @@ export class AndCriterion extends Criterion {
     }
 
     getSummary(): string {
-        return `And(${this.criteria.map(c => c.getSummary())})`
+        return `And(${this.criteria.map(c => c.getSummary()).join(', ')})`
     }
 
     serialize(): SerializedCriterion {
@@ -251,7 +251,7 @@ export class OrCriterion extends Criterion {
     }
 
     getSummary(): string {
-        return `Or(${this.criteria.map(c => c.getSummary())})`
+        return `Or(${this.criteria.map(c => c.getSummary()).join(', ')})`
     }
 
     serialize(): SerializedCriterion {

@@ -26,18 +26,16 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 
 ### Publishing criterion
 
-The plugin evaluates each markdown file against a tree combining criteria.
+The plugin evaluates each markdown file against a tree combining criteria:
 
-| Type | Description | Evaluation logic |
-| :--- | :--- | :--- |
-| **Tag** | Matches Obsidian tags. | Matches exact tag or hierarchical subtags (e.g., `public` matches `#public/blog`). |
-| **Frontmatter** | Matches YAML frontmatter. | Matches a specific key and value. Supports regex in the value field. |
-| **Folder** | Filters by directory. | Includes or excludes specific base folders. |
-| **Title** | Matches filename. | Matches the file basename (without extension). Supports substring or regex. |
-| **Path** | Matches full path. | Matches the relative path from vault root. Supports substring or regex. |
-| **Content** | Matches body text. | Executes a regex search against the file content. |
+- **Tag**: Matches exact Obsidian tag or hierarchical subtags (e.g., `public` matches `#public/blog`).
+- **Frontmatter**: Matches a specific key and value in YAML frontmatter, with support for regex in the value field.
+- **Folder**: Includes or excludes specific directories.
+- **Title**: Matches the file basename (without extension). Supports substring or regex.
+- **Path**: Matches the relative path from vault root. Supports substring or regex.
+- **Content**: Matches body text based on a regex search.
 
-Criteria can be nested using:
+Criteria can be combined using:
 - **AND**: All child criteria must be true.
 - **OR**: At least one child criterion must be true.
 - **NOT**: Inverts the result of the child criterion.

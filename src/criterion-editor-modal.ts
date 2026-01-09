@@ -34,7 +34,8 @@ export class CriterionEditorModal extends Modal {
 
     constructor(app: App, criterion: Criterion, onSave: (updatedCriterion: Criterion) => void) {
         super(app)
-        this.rootCriterion = criterion
+        // Clone the criterion to avoid modifying the original object directly
+        this.rootCriterion = Criterion.deserialize(criterion.serialize())
         this.onSave = onSave
     }
 
