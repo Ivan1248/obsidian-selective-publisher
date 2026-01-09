@@ -3,6 +3,7 @@
 A plugin for Obsidian that selectively publishes notes to a Git repository based on customizable criteria.
 
 ## Features
+<!-- ![Screenshot of Plugin](path/to/screenshot.png) -->
 
 - **Selective publishing**: Filtering of notes based on tags, frontmatter, paths, or content.
 - **Git integration**: Committing and pushing to a target repository.
@@ -13,6 +14,12 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 - Obsidian v0.15.0+
 - Git installed and configured locally.
 - A local clone of target remote repository.
+
+## Installation
+
+1. Search for "Selective Publisher" in Obsidian's Community Plugins.
+2. Click "Install" and then "Enable".
+3. Configure the plugin settings (see below).
 
 ## Setup
 

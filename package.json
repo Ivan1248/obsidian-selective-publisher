@@ -15,7 +15,7 @@
     "github-pages",
     "publishing"
   ],
-  "author": "Ivan Grubišić, Claude 3.7, GPT-4o, Claude 4.5 Opus, Gemini 3 Flash, Claude 4.5 Haiku",
+  "author": "Ivan Grubišić",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^25.0.3",
