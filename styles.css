@@ -5,7 +5,7 @@
     font-size: var(--font-smallest);
 }
 
-.sp-sub-criterion-container {
+.sp-criterion-container {
     border-left: 2px solid var(--interactive-accent);
     padding-left: 1em;
 }
@@ -17,17 +17,6 @@
 }
 
 /* Badges and list for publishing preview */
-
-.publish-preview-modal h2 {
-    font-size: var(--font-ui-large);
-    margin-bottom: 0.5em;
-}
-
-.publish-preview-modal h3 {
-    font-size: var(--font-ui-medium);
-    margin-top: 1em;
-    margin-bottom: 0.5em;
-}
 
 .sp-publish-preview-list {
     list-style: none;

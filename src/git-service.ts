@@ -56,9 +56,7 @@ export class GitHelper {
                 await execFileAsync('git', ['commit', '-m', message], { cwd: repoPath })
             } catch (err) {
                 // If nothing to commit, it might fail with exit code 1
-                if ((err as any).stdout?.includes('nothing to commit') || (err as any).stderr?.includes('nothing to commit')) {
-                    console.log('Nothing to commit.')
-                } else {
+                if (!(err as any).stdout?.includes('nothing to commit') && !(err as any).stderr?.includes('nothing to commit')) {
                     throw err
                 }
             }

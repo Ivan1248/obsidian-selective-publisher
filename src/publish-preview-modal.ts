@@ -1,4 +1,4 @@
-import { App, Modal, TFile } from 'obsidian'
+import { App, Modal, TFile, ButtonComponent, Setting } from 'obsidian'
 import * as fs from 'fs/promises'
 
 export const enum FileUpdateStatus {
@@ -41,7 +41,7 @@ export class PublishPreviewModal extends Modal {
     onOpen() {
         const { contentEl } = this
         contentEl.empty()
-        contentEl.addClass('publish-preview-modal')
+        contentEl.addClass('sp-publish-preview-modal')
         contentEl.createEl('h2', { text: 'Publishing preview' })
 
         const sortedFiles = [...this.fileStatuses].sort((a, b) => a.path.localeCompare(b.path))
@@ -56,14 +56,20 @@ export class PublishPreviewModal extends Modal {
                 this.renderFileList(contentEl, 'Changed files', changed)
 
                 const btnContainer = contentEl.createEl('div', { cls: 'modal-button-container' })
-                btnContainer.createEl('button', { text: 'Publish', cls: 'mod-cta' }).onclick = async () => {
-                    this.close()
-                    await this.onAction('publish')
-                }
-                btnContainer.createEl('button', { text: 'Commit' }).onclick = async () => {
-                    this.close()
-                    await this.onAction('commit')
-                }
+                new ButtonComponent(btnContainer)
+                    .setButtonText('Publish')
+                    .setCta()
+                    .onClick(async () => {
+                        this.close()
+                        await this.onAction('publish')
+                    })
+
+                new ButtonComponent(btnContainer)
+                    .setButtonText('Commit')
+                    .onClick(async () => {
+                        this.close()
+                        await this.onAction('commit')
+                    })
             }
 
             this.renderFileList(contentEl, 'Unmodified published files', unmodified, true)
@@ -73,7 +79,7 @@ export class PublishPreviewModal extends Modal {
     private renderFileList(container: HTMLElement, title: string, files: FileWithStatus[], hideBadge = false) {
         if (files.length === 0) return
 
-        container.createEl('h3', { text: `${title} (${files.length})` })
+        new Setting(container).setName(`${title} (${files.length})`).setHeading()
         const listEl = container.createEl('ul', { cls: 'sp-publish-preview-list' })
 
         for (const { path, status } of files) {

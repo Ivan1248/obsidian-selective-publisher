@@ -15,7 +15,7 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
         const { containerEl } = this
 
         containerEl.empty()
-        containerEl.createEl('h2', { text: 'Selective Publisher settings' })
+        new Setting(containerEl).setName('Publishing repository').setHeading()
 
         // Publishing repository setting
         let repoText: TextComponent
@@ -32,16 +32,27 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                         await this.validateAndRefreshBranches(branchDropdown)
                     })
             })
-            .addButton((button) =>
-                button.setButtonText('Browse...')
+            .addExtraButton((button) =>
+                button.setIcon('folder')
                     .setTooltip('Select content directory in repository')
                     .onClick(async () => {
-                        const selectedPath = await SelectivePublisherSettingTab.selectDirectory(this.plugin.settings.publishRepo)
-                        if (selectedPath) {
-                            this.plugin.settings.publishRepo = selectedPath
-                            repoText.setValue(selectedPath)
-                            await this.plugin.saveSettings()
-                            await this.validateAndRefreshBranches(branchDropdown)
+                        try {
+                            const { dialog } = require('electron').remote
+                            const result = await dialog.showOpenDialog({
+                                properties: ['openDirectory'],
+                                defaultPath: this.plugin.settings.publishRepo
+                            })
+
+                            if (!result.canceled && result.filePaths.length > 0) {
+                                const selectedPath = result.filePaths[0]
+                                this.plugin.settings.publishRepo = selectedPath
+                                repoText.setValue(selectedPath)
+                                await this.plugin.saveSettings()
+                                await this.validateAndRefreshBranches(branchDropdown)
+                            }
+                        } catch (error) {
+                            console.error('Directory picker error:', error)
+                            new Notice('Failed to open directory picker.')
                         }
                     })
             )
@@ -49,7 +60,7 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
         // Branch dropdown setting
         let branchDropdown: DropdownComponent
         new Setting(containerEl)
-            .setName('Publishing branch')
+            .setName('Branch')
             .setDesc('Branch to push the published notes to.')
             .addDropdown((dropdown) => {
                 branchDropdown = dropdown
@@ -72,6 +83,8 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings()
                     })
             )
+
+        new Setting(containerEl).setName('Publishing').setHeading()
 
         // Show preview before publishing
         new Setting(containerEl)
@@ -144,7 +157,7 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
             // Ensure a valid branch is selected
             if (!branches.includes(this.plugin.settings.publishBranch)) {
                 // If current branch is not in list, select the first one and save
-                this.plugin.settings.publishBranch = branches[0]
+                this.plugin.settings.publishBranch = branches[0]!
                 await this.plugin.saveSettings()
             }
         }
@@ -152,25 +165,5 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
         dropdown.setValue(this.plugin.settings.publishBranch)
     }
 
-    private static async selectDirectory(defaultPath: string): Promise<string | null> {
-        try {
-            let dialog: any = (window as any).electron?.remote?.dialog
 
-            if (dialog) {
-                const result = await dialog.showOpenDialog({
-                    properties: ['openDirectory'],
-                    defaultPath: defaultPath
-                })
-                if (!result.canceled && result.filePaths.length > 0) {
-                    return result.filePaths[0]
-                }
-            } else {
-                new Notice('Native directory picker is not supported in this environment.')
-            }
-        } catch (error) {
-            console.error('Directory picker error:', error)
-            new Notice('Failed to open directory picker.')
-        }
-        return null
-    }
 }

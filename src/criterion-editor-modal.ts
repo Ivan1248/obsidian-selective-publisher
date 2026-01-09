@@ -45,8 +45,8 @@ export class CriterionEditorModal extends Modal {
         contentEl.empty()
         contentEl.createEl('h2', { text: 'Edit publishing criterion' })
 
-        const criteriaContainer = contentEl.createDiv({ cls: 'criteria-container' })
-        this.renderCriterion(criteriaContainer, this.rootCriterion, 0, null, -1)
+        const outerCriterionContainer = contentEl.createDiv({ cls: 'sp-outer-criterion-container' })
+        this.renderCriterion(outerCriterionContainer, this.rootCriterion, 0, null, -1)
 
         new Setting(contentEl)
             .addButton((btn) =>
@@ -62,13 +62,13 @@ export class CriterionEditorModal extends Modal {
             )
     }
 
-    renderCriterion(container: HTMLElement, criterion: Criterion, depth: number, parent: AndCriterion | OrCriterion | NotCriterion | null, index: number) {
+    renderCriterion(container: HTMLElement, criterion: Criterion, depth: number, parent: AndCriterion | OrCriterion | NotCriterion | null, index: number, onDelete?: () => void) {
         container.empty()
 
-        const criterionContainer = container.createDiv({ cls: 'criterion-container' })
+        const criterionContainer = container.createDiv({ cls: 'sp-criterion-container' })
 
         // Type dropdown
-        new Setting(criterionContainer)
+        const headerSetting = new Setting(criterionContainer)
             .setName('Criterion type')
             .addDropdown((dropdown) => {
                 for (const type in CriterionType)
@@ -86,14 +86,20 @@ export class CriterionEditorModal extends Modal {
                             parent.criterion = newCriterion
                         }
 
-                        this.renderCriterion(container, newCriterion, depth, parent, index)
+                        this.renderCriterion(container, newCriterion, depth, parent, index, onDelete)
                     })
             })
 
+        if (onDelete) {
+            headerSetting.addExtraButton((button) => {
+                button.setIcon('cross')
+                    .setTooltip('Remove criterion')
+                    .onClick(onDelete)
+            })
+        }
+
         const makeSubcriterionContainer = (depth: number): HTMLElement => {
-            const div = criterionContainer.createDiv({ cls: 'sp-sub-criterion-container' })
-            div.style.marginLeft = `${depth * 10}px`
-            return div
+            return criterionContainer.createDiv({ cls: 'sp-subcriterion-container' })
         }
 
         // Render type-specific fields
@@ -117,7 +123,7 @@ export class CriterionEditorModal extends Modal {
             new Setting(criterionContainer).setName('Is regex')
                 .addToggle((toggle) => toggle.setValue(criterion.isRegex).onChange((v) => {
                     criterion.isRegex = v
-                    this.renderCriterion(container, criterion, depth, parent, index)
+                    this.renderCriterion(container, criterion, depth, parent, index, onDelete)
                 }))
 
         } else if (criterion instanceof PathCriterion) {
@@ -130,7 +136,7 @@ export class CriterionEditorModal extends Modal {
             new Setting(criterionContainer).setName('Is regex')
                 .addToggle((toggle) => toggle.setValue(criterion.isRegex).onChange((v) => {
                     criterion.isRegex = v
-                    this.renderCriterion(container, criterion, depth, parent, index)
+                    this.renderCriterion(container, criterion, depth, parent, index, onDelete)
                 }))
 
         } else if (criterion instanceof FolderCriterion) {
@@ -148,17 +154,16 @@ export class CriterionEditorModal extends Modal {
         } else if (criterion instanceof AndCriterion || criterion instanceof OrCriterion) {
             criterion.criteria.forEach((sub, i) => {
                 const subContainer = makeSubcriterionContainer(depth)
-                this.renderCriterion(subContainer, sub, depth + 1, criterion, i)
-                new Setting(subContainer).addButton((btn) =>
-                    btn.setButtonText('Remove').onClick(() => {
-                        criterion.criteria.splice(i, 1)
-                        this.renderCriterion(container, criterion, depth, parent, index)
-                    }))
+                const subOnDelete = () => {
+                    criterion.criteria.splice(i, 1)
+                    this.renderCriterion(container, criterion, depth, parent, index, onDelete)
+                }
+                this.renderCriterion(subContainer, sub, depth + 1, criterion, i, subOnDelete)
             })
             new Setting(criterionContainer).addButton((btn) =>
                 btn.setButtonText('Add sub-criterion').onClick(() => {
                     criterion.criteria.push(this.createDefaultCriterionByType(CriterionType.Frontmatter))
-                    this.renderCriterion(container, criterion, depth, parent, index)
+                    this.renderCriterion(container, criterion, depth, parent, index, onDelete)
                 }))
 
         } else if (criterion instanceof NotCriterion) {

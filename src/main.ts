@@ -77,7 +77,6 @@ export default class SelectivePublisherPlugin extends Plugin {
 	async previewPublishableNotes() {
 		try {
 			const publishableFiles = await this.getPublishableFiles()
-			console.log(`Selective Publisher: found ${publishableFiles.length} publishable files.`)
 
 			// Get statuses for publishable files
 			const fileStatuses: FileWithStatus[] = await Promise.all(
@@ -116,22 +115,22 @@ export default class SelectivePublisherPlugin extends Plugin {
 				await this.previewPublishableNotes()
 				return
 			}
-			
+
 			if (!this.settings.publishBranch) {
 				new Notice('No publishing branch selected. Please check the settings.')
 				return
 			}
-			
+
 			const operationStr = onlyCommit ? 'commit' : 'publish'
 			new Notice(`Starting ${operationStr} operation...`)
 
 			if (!onlyCommit) {
 				await this.syncWithRemote()
 			}
-			
+
 			const publishableFiles = await this.getPublishableFiles()
 			await this.updatePublishRepoContent(publishableFiles)
-			
+
 			// Commit and optionally push changes
 			try {
 				await GitHelper.add(this.settings.publishRepo)
@@ -158,8 +157,8 @@ export default class SelectivePublisherPlugin extends Plugin {
 		try {
 			const metadata = this.app.metadataCache.getFileCache(file)
 			if (!metadata) {
-				new Notice(`Metadata not found for file: ${file.path}`)
-				// TODO: Maybe add fallback parser for frontmatter if metadata is missing
+				// new Notice(`Metadata not found for file: ${file.path}`)
+				return false
 			}
 			const content = await this.app.vault.read(file)
 			return await this.settings.criterion.evaluate(file, content, metadata)
@@ -249,7 +248,6 @@ export default class SelectivePublisherPlugin extends Plugin {
 			try {
 				await fs.access(destPath)
 				await fs.unlink(destPath)
-				console.log(`Removed from publish repo: ${relativePath}`)
 			} catch {
 				// File doesn't exist, nothing to do
 			}
