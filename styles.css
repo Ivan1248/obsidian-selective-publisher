@@ -1,8 +1,71 @@
-/*
+/* Criterion editor styles */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.sp-regex-error {
+    color: var(--text-error);
+    font-size: var(--font-smallest);
+}
 
-If your plugin does not need CSS, delete this file.
+.sp-sub-criterion-container {
+    border-left: 2px solid var(--interactive-accent);
+    padding-left: 1em;
+}
 
-*/
+/* Settings styles */
+
+.sp-criterion-summary {
+    font-size: var(--font-small);
+}
+
+/* Badges and list for publishing preview */
+
+.publish-preview-modal h2 {
+    font-size: var(--font-ui-large);
+    margin-bottom: 0.5em;
+}
+
+.publish-preview-modal h3 {
+    font-size: var(--font-ui-medium);
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+}
+
+.sp-publish-preview-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.5em 0;
+    font-size: var(--font-ui-small);
+}
+
+.sp-publish-preview-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.15em 0.5em;
+}
+
+.sp-publish-badge {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    margin-left: 1em;
+}
+
+/* Status-specific colors */
+
+.sp-publish-preview-list li.is-new .sp-publish-path,
+.sp-publish-preview-list li.is-new .sp-publish-badge {
+    color: var(--text-success);
+}
+
+.sp-publish-preview-list li.is-modified .sp-publish-path,
+.sp-publish-preview-list li.is-modified .sp-publish-badge {
+    color: #e2c08d;
+}
+
+.sp-publish-preview-list li.is-deleted .sp-publish-path {
+    color: var(--text-error);
+    text-decoration: line-through;
+}
+
+.sp-publish-preview-list li.is-deleted .sp-publish-badge {
+    color: var(--text-error);
+}

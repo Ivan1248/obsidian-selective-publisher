@@ -1,29 +1,31 @@
 {
-	"name": "obsidian-sample-plugin",
-	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
-	"main": "main.js",
-	"type": "module",
-	"scripts": {
-		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"version": "node version-bump.mjs && git add manifest.json versions.json",
-		"lint": "eslint ."
-	},
-	"keywords": [],
-	"license": "0-BSD",
-	"devDependencies": {
-		"@types/node": "^16.11.6",
-		"esbuild": "0.25.5",
-		"eslint-plugin-obsidianmd": "0.1.9",
-		"globals": "14.0.0",
-		"tslib": "2.4.0",
-		"typescript": "^5.8.3",
-		"typescript-eslint": "8.35.1",
-		"@eslint/js": "9.30.1",
-		"jiti": "2.6.1"
-	},
-	"dependencies": {
-		"obsidian": "latest"
-	}
+  "name": "obsidian-selective-publisher",
+  "version": "1.0.0",
+  "description": "An Obsidian plugin that selectively publishes notes to a public repository",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "lint": "eslint src",
+    "version": "node version-bump.mjs && git add manifest.json versions.json"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "github-pages",
+    "publishing"
+  ],
+  "author": "Ivan Grubišić, Claude 3.7, GPT-4o, Claude 4.5 Opus, Gemini 3 Flash, Claude 4.5 Haiku",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "@typescript-eslint/eslint-plugin": "^8.52.0",
+    "@typescript-eslint/parser": "^8.52.0",
+    "builtin-modules": "^5.0.0",
+    "esbuild": "^0.27.2",
+    "obsidian": "latest",
+    "tslib": "2.8.1",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {}
 }
