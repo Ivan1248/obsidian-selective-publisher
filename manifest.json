@@ -3,7 +3,7 @@
   "name": "Selective Publisher",
   "version": "1.0.0",
   "minAppVersion": "0.15.0",
-  "description": "An Obsidian plugin that selectively publishes notes to a public repository.",
+  "description": "Selectively publishes notes to a Git repository.",
   "author": "Ivan Grubišić",
   "authorUrl": "https://github.com/Ivan1248",
   "isDesktopOnly": true
