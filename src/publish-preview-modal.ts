@@ -34,7 +34,7 @@ export interface FileWithStatus {
 export type PublishAction = 'publish' | 'commit'
 
 export class PublishPreviewModal extends Modal {
-    constructor(app: App, private fileStatuses: FileWithStatus[], private onAction: (action: PublishAction) => Promise<void>) {
+    constructor(app: App, private fileStatuses: FileWithStatus[], private hasUncommittedChanges: boolean, private onAction: (action: PublishAction) => Promise<void>) {
         super(app)
     }
 
@@ -47,10 +47,10 @@ export class PublishPreviewModal extends Modal {
         const sortedFiles = [...this.fileStatuses].sort((a, b) => a.path.localeCompare(b.path))
         const changed = sortedFiles.filter(f => f.status !== FileUpdateStatus.Unmodified)
         const unmodified = sortedFiles.filter(f => f.status === FileUpdateStatus.Unmodified)
-        if (sortedFiles.length === 0) {
+        if (sortedFiles.length === 0 && !this.hasUncommittedChanges) {
             contentEl.createEl('p', { text: 'No files match the current publishing criteria and no files to unpublish.' })
         } else {
-            if (changed.length === 0) {
+            if (changed.length === 0 && !this.hasUncommittedChanges) {
                 contentEl.createEl('p', { text: 'Published files are up to date. No changes to publish.' })
             } else {
                 this.renderFileList(contentEl, 'Changed files', changed)

@@ -139,6 +139,7 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
 
     async refreshBranchDropdown(dropdown: DropdownComponent) {
         const branches = await GitHelper.getBranches(this.plugin.settings.publishRepo)
+            .catch(() => [] as string[])
 
         // Clear existing options
         const selectEl = dropdown.selectEl

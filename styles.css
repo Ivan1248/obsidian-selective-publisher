@@ -1,4 +1,19 @@
-/* Criterion editor styles */
+/* General */
+
+.sp-criterion-summary,
+.sp-error-log {
+    font-size: var(--font-smallest);
+    width: 100%;
+    box-sizing: border-box;
+    background-color: var(--background-secondary);
+    padding: 1em;
+    margin: 1em 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    user-select: text;
+}
+
+/* Criterion editor */
 
 .sp-regex-error {
     color: var(--text-error);
@@ -10,11 +25,8 @@
     padding-left: 1em;
 }
 
-/* Settings styles */
+/* Settings */
 
-.sp-criterion-summary {
-    font-size: var(--font-small);
-}
 
 /* Badges and list for publishing preview */
 
@@ -47,7 +59,7 @@
 
 .sp-publish-preview-list li.is-modified .sp-publish-path,
 .sp-publish-preview-list li.is-modified .sp-publish-badge {
-    color: #e2c08d;
+    color: #e2c08d;  /* TODO: improve for light mode */
 }
 
 .sp-publish-preview-list li.is-deleted .sp-publish-path {
@@ -56,5 +68,11 @@
 }
 
 .sp-publish-preview-list li.is-deleted .sp-publish-badge {
+    color: var(--text-error);
+}
+
+/* Failure modal */
+
+.sp-error-log {
     color: var(--text-error);
 }

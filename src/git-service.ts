@@ -16,7 +16,7 @@ export class GitHelper {
             return { isValid: true }
         } catch (error) {
             try {
-                this.handleGitError(error, 'validate repository')
+                this.handleGitError(repoPath, error, 'validate repository')
             } catch (err) {
                 return { isValid: false, error: (err as Error).message }
             }
@@ -35,8 +35,7 @@ export class GitHelper {
             const { stdout } = await execFileAsync('git', ['branch', '--format=%(refname:short)'], { cwd: repoPath })
             return stdout.split('\n').map(b => b.trim()).filter(b => b.length > 0)
         } catch (error) {
-            this.handleGitError(error, 'fetch branches')
-            return []
+            this.handleGitError(repoPath, error, 'fetch branches')
         }
     }
 
@@ -44,8 +43,7 @@ export class GitHelper {
         try {
             await execFileAsync('git', ['add', '.'], { cwd: repoPath })
         } catch (error) {
-            this.handleGitError(error, 'stage changes')
-            throw error
+            this.handleGitError(repoPath, error, 'stage changes')
         }
     }
 
@@ -61,8 +59,7 @@ export class GitHelper {
                 }
             }
         } catch (error) {
-            this.handleGitError(error, 'commit changes')
-            throw error
+            this.handleGitError(repoPath, error, 'commit changes')
         }
     }
 
@@ -70,8 +67,7 @@ export class GitHelper {
         try {
             await execFileAsync('git', ['push', 'origin', branch], { cwd: repoPath })
         } catch (error) {
-            this.handleGitError(error, 'push changes')
-            throw error
+            this.handleGitError(repoPath, error, 'push changes')
         }
     }
 
@@ -83,17 +79,33 @@ export class GitHelper {
             if ((error as any).stderr?.includes('CONFLICT') || (error as any).message?.includes('CONFLICT')) {
                 throw new Error('Merge conflict detected. Please resolve conflicts manually in your repository.')
             }
-            this.handleGitError(error, 'pull from remote')
-            throw error
+            this.handleGitError(repoPath, error, 'pull from remote')
         }
     }
 
-    private static handleGitError(error: any, action: string) {
-        console.error(`Git error during ${action}:`, error)
-        // ENOENT specifically means the git executable was not found 
-        // (or less commonly that the cwd directory does not exist)
+    private static handleGitError(repoPath: string, error: any, action: string): never {
+        console.error(`Git error during ${action} in path ${repoPath}:`, error)
+
+        let help = ''
         if ((error as any).code === 'ENOENT') {
-            throw new Error('Git is not found.')
+            help = '\nThe path does not correspond to a directory inside a valid Git repository.\n'
+        }
+
+        const dir = `Publishing path: ${repoPath}\n`
+        const cmd = (error as any).cmd ? `Command: ${(error as any).cmd}` : ''
+        const stdout = (error as any).stdout ? `\nStdout: ${(error as any).stdout}` : ''
+        const stderr = (error as any).stderr ? `\nStderr: ${(error as any).stderr}` : ''
+
+        throw new Error(`Git error during action "${action}":\n${dir}${cmd}${stdout}${stderr}\nMessage: ${(error as Error).message}${help}`)
+    }
+
+    static async hasUncommittedChanges(repoPath: string): Promise<boolean> {
+        try {
+            // git status --porcelain returns empty string if no changes
+            const { stdout } = await execFileAsync('git', ['status', '--porcelain'], { cwd: repoPath })
+            return stdout.trim().length > 0
+        } catch (error) {
+            this.handleGitError(repoPath, error, 'check status')
         }
     }
 }

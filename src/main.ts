@@ -2,6 +2,7 @@ import { Notice, Plugin, TFile } from 'obsidian'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import { PublishPreviewModal, FileWithStatus, getFileStatus, FileUpdateStatus } from './publish-preview-modal'
+import { FailureModal } from './failure-modal'
 import { Criterion, PathCriterion, AndCriterion, NotCriterion, TagCriterion, TitleCriterion } from './criterion'
 import { SelectivePublisherSettingTab } from './settings-tab'
 import { GitHelper } from './git-service'
@@ -95,17 +96,20 @@ export default class SelectivePublisherPlugin extends Plugin {
 
 			const allStatuses = [...fileStatuses, ...deletedStatuses]
 
-			if (allStatuses.length === 0) {
+			const hasUncommittedChanges = await GitHelper.hasUncommittedChanges(this.settings.publishRepo)
+
+			if (allStatuses.length === 0 && !hasUncommittedChanges) {
 				new Notice('No files to publish or unpublish.')
 				return
 			}
 
 			// Create a modal to display the list
-			const modal = new PublishPreviewModal(this.app, allStatuses, (action) => this.publishNotes(action === 'commit', true))
+			const modal = new PublishPreviewModal(this.app, allStatuses, hasUncommittedChanges, (action) => this.publishNotes(action === 'commit', true))
 			modal.open()
 		} catch (error) {
 			console.error('Preview failed:', error)
-			new Notice(`Preview failed: ${(error as Error).message}`)
+			// new Notice(`Preview failed: ${(error as Error).message}`)
+			new FailureModal(this.app, error as Error, this.settings.publishRepo).open()
 		}
 	}
 
@@ -145,7 +149,8 @@ export default class SelectivePublisherPlugin extends Plugin {
 			}
 		} catch (error) {
 			console.error('Publishing failed:', error)
-			new Notice(`Publishing failed: ${(error as Error).message}`)
+			// new Notice(`Publishing failed: ${(error as Error).message}`)
+			new FailureModal(this.app, error as Error, this.settings.publishRepo).open()
 		}
 	}
 
