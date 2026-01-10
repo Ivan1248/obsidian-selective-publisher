@@ -167,7 +167,7 @@ export default class SelectivePublisherPlugin extends Plugin {
 				return false
 			}
 			const content = await this.app.vault.read(file)
-			return await this.settings.criterion.evaluate(file, content, metadata)
+			return this.settings.criterion.evaluate(file, content, metadata)
 		} catch (error) {
 			console.error(`Error evaluating publishability for ${file.path}:`, error)
 			return false

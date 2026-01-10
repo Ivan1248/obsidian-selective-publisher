@@ -62,7 +62,7 @@ export abstract class Criterion {
     }
 
     abstract serialize(): SerializedCriterion
-    abstract evaluate(file: TFile, content: string, metadata: CachedMetadata): Promise<boolean>
+    abstract evaluate(file: TFile, content: string, metadata: CachedMetadata): boolean
     abstract getSummary(): string
 
     getType(): CriterionType {
@@ -78,7 +78,7 @@ export class FrontmatterCriterion extends Criterion {
         super()
     }
 
-    async evaluate(file: TFile, content: string, metadata: CachedMetadata): Promise<boolean> {
+    evaluate(file: TFile, content: string, metadata: CachedMetadata): boolean {
         const frontmatterValue = metadata?.frontmatter?.[this.key] as unknown
         if (frontmatterValue === undefined) return false
         
@@ -107,7 +107,7 @@ export class FolderCriterion extends Criterion {
         super()
     }
 
-    async evaluate(file: TFile, _content: string, _metadata: CachedMetadata): Promise<boolean> {
+    evaluate(file: TFile, _content: string, _metadata: CachedMetadata): boolean {
         if (this.excludeFolders.some(folder => file.path.startsWith(folder + '/') || file.path === folder)) {
             return false
         }
@@ -142,7 +142,7 @@ export class ContentCriterion extends Criterion {
         super()
     }
 
-    async evaluate(_file: TFile, content: string, _metadata: CachedMetadata): Promise<boolean> {
+    evaluate(_file: TFile, content: string, _metadata: CachedMetadata): boolean {
         return safeRegexTest(this.regex, content)
     }
 
@@ -167,7 +167,7 @@ export class TitleCriterion extends Criterion {
         super()
     }
 
-    async evaluate(file: TFile, _content: string, _metadata: CachedMetadata): Promise<boolean> {
+    evaluate(file: TFile, _content: string, _metadata: CachedMetadata): boolean {
         if (this.isRegex) {
             return safeRegexTest(this.pattern, file.basename)
         }
@@ -195,7 +195,7 @@ export class PathCriterion extends Criterion {
         super()
     }
 
-    async evaluate(file: TFile, _content: string, _metadata: CachedMetadata): Promise<boolean> {
+    evaluate(file: TFile, _content: string, _metadata: CachedMetadata): boolean {
         if (this.isRegex) {
             return safeRegexTest(this.pattern, file.path)
         }
@@ -227,9 +227,9 @@ export class AndCriterion extends Criterion {
         super()
     }
 
-    async evaluate(file: TFile, content: string, metadata: CachedMetadata): Promise<boolean> {
+    evaluate(file: TFile, content: string, metadata: CachedMetadata): boolean {
         for (const criterion of this.criteria) {
-            if (!(await criterion.evaluate(file, content, metadata))) {
+            if (!criterion.evaluate(file, content, metadata)) {
                 return false
             }
         }
@@ -258,9 +258,9 @@ export class OrCriterion extends Criterion {
         super()
     }
 
-    async evaluate(file: TFile, content: string, metadata: CachedMetadata): Promise<boolean> {
+    evaluate(file: TFile, content: string, metadata: CachedMetadata): boolean {
         for (const criterion of this.criteria) {
-            if (await criterion.evaluate(file, content, metadata)) {
+            if (criterion.evaluate(file, content, metadata)) {
                 return true
             }
         }
@@ -289,8 +289,8 @@ export class NotCriterion extends Criterion {
         super()
     }
 
-    async evaluate(file: TFile, content: string, metadata: CachedMetadata): Promise<boolean> {
-        return !(await this.criterion.evaluate(file, content, metadata))
+    evaluate(file: TFile, content: string, metadata: CachedMetadata): boolean {
+        return !this.criterion.evaluate(file, content, metadata)
     }
 
     getSummary(): string {
@@ -329,7 +329,7 @@ function extractTagsFromContent(content: string): string[] {
     return Array.from(tags)
 }
 
-export async function getAllTagsFromFile(file: TFile, content: string, metadata: CachedMetadata): Promise<string[]> {
+export function getAllTagsFromFile(file: TFile, content: string, metadata: CachedMetadata): string[] {
     const frontmatterTags = metadata?.frontmatter?.tags as unknown
     const tagsFromFrontmatter: string[] = Array.isArray(frontmatterTags)
         ? (frontmatterTags as unknown[]).map(stringifyValue)
@@ -348,8 +348,8 @@ export class TagCriterion extends Criterion {
         this.tag = tag.toLowerCase()
     }
 
-    async evaluate(file: TFile, content: string, metadata: CachedMetadata): Promise<boolean> {
-        const tags = await getAllTagsFromFile(file, content, metadata)
+    evaluate(file: TFile, content: string, metadata: CachedMetadata): boolean {
+        const tags = getAllTagsFromFile(file, content, metadata)
         return tags.some(tag => {
             const normalizedTag = tag.toLowerCase()
             // match exact tag or hierarchical subtags (e.g., "foo" matches "foo", "foo/bar", "foo/bar/baz")
