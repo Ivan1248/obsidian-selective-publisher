@@ -32,29 +32,29 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                         await this.validateAndRefreshBranches(branchDropdown)
                     })
             })
-            .addExtraButton((button) =>
-                button.setIcon('folder')
-                    .setTooltip('Select content directory in repository')
-                    .onClick(async () => {
-                        try {
-                            const { dialog } = require('electron').remote
-                            const result = await dialog.showOpenDialog({
-                                properties: ['openDirectory'],
-                                defaultPath: this.plugin.settings.publishRepo
-                            })
+            .addExtraButton((btn) => btn
+                .setIcon('folder')
+                .setTooltip('Select content directory in repository')
+                .onClick(async () => {
+                    try {
+                        const { dialog } = require('electron').remote
+                        const result = await dialog.showOpenDialog({
+                            properties: ['openDirectory'],
+                            defaultPath: this.plugin.settings.publishRepo
+                        })
 
-                            if (!result.canceled && result.filePaths.length > 0) {
-                                const selectedPath = result.filePaths[0]
-                                this.plugin.settings.publishRepo = selectedPath
-                                repoText.setValue(selectedPath)
-                                await this.plugin.saveSettings()
-                                await this.validateAndRefreshBranches(branchDropdown)
-                            }
-                        } catch (error) {
-                            console.error('Directory picker error:', error)
-                            new Notice('Failed to open directory picker.')
+                        if (!result.canceled && result.filePaths.length > 0) {
+                            const selectedPath = result.filePaths[0]
+                            this.plugin.settings.publishRepo = selectedPath
+                            repoText.setValue(selectedPath)
+                            await this.plugin.saveSettings()
+                            await this.validateAndRefreshBranches(branchDropdown)
                         }
-                    })
+                    } catch (error) {
+                        console.error('Directory picker error:', error)
+                        new Notice('Failed to open directory picker.')
+                    }
+                })
             )
 
         // Branch dropdown setting
@@ -102,24 +102,24 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
         new Setting(containerEl)
             .setName('Publishing criterion')
             .setDesc('The criterion for selecting notes to publish.')
-            .addButton((button) =>
-                button.setButtonText('Edit criterion')
-                    .setCta()
-                    .onClick(() => {
-                        new CriterionEditorModal(this.app, this.plugin.settings.criterion, async (updatedCriterion) => {
-                            this.plugin.settings.criterion = updatedCriterion
-                            await this.plugin.saveSettings()
-                            this.display()
-                        }).open()
-                    })
+            .addButton((btn) => btn
+                .setButtonText('Edit criterion')
+                .setCta()
+                .onClick(() => {
+                    new CriterionEditorModal(this.app, this.plugin.settings.criterion, async (updatedCriterion) => {
+                        this.plugin.settings.criterion = updatedCriterion
+                        await this.plugin.saveSettings()
+                        this.display()
+                    }).open()
+                })
             )
-            .addButton((button) =>
-                button.setButtonText('Preview publishable notes')
-                    .onClick(this.plugin.previewPublishableNotes.bind(this.plugin))
+            .addButton((btn) => btn
+                .setButtonText('Preview publishable notes')
+                .onClick(this.plugin.previewPublishableNotes.bind(this.plugin))
             )
 
-        containerEl.createEl('div', {
-            text: `Current criterion: ${this.plugin.settings.criterion.getSummary()}`,
+        containerEl.createEl('pre', {
+            text: this.plugin.settings.criterion.getSummary(),
             cls: 'sp-criterion-summary',
         })
 

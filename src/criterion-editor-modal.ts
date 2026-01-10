@@ -56,9 +56,9 @@ export class CriterionEditorModal extends Modal {
                         this.close()
                     })
             )
-            .addButton((btn) =>
-                btn.setButtonText('Cancel')
-                    .onClick(() => this.close())
+            .addButton((btn) => btn
+                .setButtonText('Cancel')
+                .onClick(() => this.close())
             )
     }
 
@@ -91,11 +91,11 @@ export class CriterionEditorModal extends Modal {
             })
 
         if (onDelete) {
-            headerSetting.addExtraButton((button) => {
-                button.setIcon('cross')
-                    .setTooltip('Remove criterion')
-                    .onClick(onDelete)
-            })
+            headerSetting.addExtraButton((btn) => btn
+                .setIcon('cross')
+                .setTooltip('Remove criterion')
+                .onClick(onDelete)
+            )
         }
 
         const makeSubcriterionContainer = (depth: number): HTMLElement => {
@@ -160,8 +160,8 @@ export class CriterionEditorModal extends Modal {
                 }
                 this.renderCriterion(subContainer, sub, depth + 1, criterion, i, subOnDelete)
             })
-            new Setting(criterionContainer).addButton((btn) =>
-                btn.setButtonText('Add sub-criterion').onClick(() => {
+            new Setting(criterionContainer).addButton((btn) => btn
+                .setButtonText('Add sub-criterion').onClick(() => {
                     criterion.criteria.push(this.createDefaultCriterionByType(CriterionType.Frontmatter))
                     this.renderCriterion(container, criterion, depth, parent, index, onDelete)
                 }))

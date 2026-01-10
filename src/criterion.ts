@@ -203,6 +203,10 @@ export class PathCriterion extends Criterion {
     }
 }
 
+function indentText(text: string, spaces: number): string {
+    return text.replace(/^/gm, ' '.repeat(spaces));
+}
+
 @RegisterCriterion
 export class AndCriterion extends Criterion {
     type = CriterionType.And
@@ -221,7 +225,8 @@ export class AndCriterion extends Criterion {
     }
 
     getSummary(): string {
-        return `And(${this.criteria.map(c => c.getSummary()).join(', ')})`
+        const indentedChildren = this.criteria.map(c => indentText(c.getSummary(), 2)).join('\n');
+        return `AND:\n${indentedChildren}`;
     }
 
     serialize(): SerializedCriterion {
@@ -251,7 +256,8 @@ export class OrCriterion extends Criterion {
     }
 
     getSummary(): string {
-        return `Or(${this.criteria.map(c => c.getSummary()).join(', ')})`
+        const indentedChildren = this.criteria.map(c => indentText(c.getSummary(), 2)).join('\n');
+        return `OR:\n${indentedChildren}`;
     }
 
     serialize(): SerializedCriterion {
@@ -276,7 +282,7 @@ export class NotCriterion extends Criterion {
     }
 
     getSummary(): string {
-        return `Not(${this.criterion.getSummary()})`
+        return `NOT ${this.criterion.getSummary()}`
     }
 
     serialize(): SerializedCriterion {
