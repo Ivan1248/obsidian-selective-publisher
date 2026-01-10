@@ -14,6 +14,7 @@ interface SelectivePublisherSettings {
 	commitMessage: string
 	showPreviewBeforePublishing: boolean
 }
+
 async function filterAsync<T>(arr: T[], cond: (el: T) => Promise<boolean>): Promise<T[]> {
 	const results = await Promise.all(arr.map(cond))
 	return arr.filter((_, index) => results[index])
@@ -59,7 +60,7 @@ export default class SelectivePublisherPlugin extends Plugin {
 
 		// Add a status bar item
 		this.statusBarItem = this.addStatusBarItem()
-		this.updateStatusBar()
+		void this.updateStatusBar()
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SelectivePublisherSettingTab(this.app, this))
@@ -276,7 +277,8 @@ export default class SelectivePublisherPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		const data = await this.loadData()
+		type SavedData = Partial<Omit<SelectivePublisherSettings, 'criterion'> & { criterion: import('./criterion').SerializedCriterion }>
+		const data = (await this.loadData()) as SavedData | null
 		this.settings = Object.assign({}, DEFAULT_SETTINGS)
 
 		if (data) {
@@ -284,7 +286,9 @@ export default class SelectivePublisherPlugin extends Plugin {
 			if (data.publishRepo) this.settings.publishRepo = data.publishRepo
 			if (data.publishBranch) this.settings.publishBranch = data.publishBranch
 			if (data.commitMessage) this.settings.commitMessage = data.commitMessage
-			if (data.showPreviewBeforePublish !== undefined) this.settings.showPreviewBeforePublishing = data.showPreviewBeforePublish
+			if (data.showPreviewBeforePublishing !== undefined) {
+				this.settings.showPreviewBeforePublishing = data.showPreviewBeforePublishing
+			}
 		}
 	}
 

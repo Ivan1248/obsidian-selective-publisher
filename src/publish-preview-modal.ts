@@ -18,7 +18,7 @@ export async function getFileStatus(srcFile: TFile, destPath: string): Promise<F
         if (srcFile.stat.mtime > stats.mtimeMs) {
             isModified = true
         }
-    } catch (error) {
+    } catch {
         // File doesn't exist in repo
         isNew = true
     }

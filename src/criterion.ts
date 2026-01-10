@@ -21,14 +21,27 @@ export interface SerializedCriterion {
 
 const registry: Map<CriterionType, typeof Criterion> = new Map()
 
+// Type for criterion class constructors that can be registered
+interface CriterionClass {
+    new (...args: unknown[]): Criterion
+    deserialize(data: SerializedCriterion): Criterion
+}
+
 // Decorator for registering criterion classes
-// Assumes that the class name ends with 'Criterion' and that the 
-function RegisterCriterion(constructor: Function) {
+// Assumes that the class name ends with 'Criterion'
+function RegisterCriterion<T extends CriterionClass>(constructor: T) {
     const type = constructor.name.replace('Criterion', '') as CriterionType
     registry.set(type, constructor as unknown as typeof Criterion)
 }
 
 // Utilities
+
+function stringifyValue(value: unknown): string {
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        return String(value)
+    }
+    return JSON.stringify(value)
+}
 
 function safeRegexTest(pattern: string, input: string, flags = 'i'): boolean {
     try {
@@ -66,12 +79,11 @@ export class FrontmatterCriterion extends Criterion {
     }
 
     async evaluate(file: TFile, content: string, metadata: CachedMetadata): Promise<boolean> {
-        const frontmatterValue = metadata?.frontmatter?.[this.key]
+        const frontmatterValue = metadata?.frontmatter?.[this.key] as unknown
         if (frontmatterValue === undefined) return false
-
-        // support both exact match and regex match
+        
         const regex = new RegExp(`^${this.value}$`, 'i')
-        return regex.test(String(frontmatterValue))
+        return regex.test(stringifyValue(frontmatterValue))
     }
 
     getSummary(): string {
@@ -318,7 +330,10 @@ function extractTagsFromContent(content: string): string[] {
 }
 
 export async function getAllTagsFromFile(file: TFile, content: string, metadata: CachedMetadata): Promise<string[]> {
-    const tagsFromFrontmatter = metadata?.frontmatter?.tags || []
+    const frontmatterTags = metadata?.frontmatter?.tags as unknown
+    const tagsFromFrontmatter: string[] = Array.isArray(frontmatterTags)
+        ? (frontmatterTags as unknown[]).map(stringifyValue)
+        : (frontmatterTags ? [stringifyValue(frontmatterTags)] : [])
     const tagsFromContent = extractTagsFromContent(content)
     return [...new Set([...tagsFromFrontmatter, ...tagsFromContent])]
 }

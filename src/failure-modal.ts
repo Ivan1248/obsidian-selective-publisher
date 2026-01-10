@@ -1,6 +1,4 @@
-import { App, Modal, Setting, Notice } from 'obsidian'
-
-import { GitHelper } from './git-service'
+import { App, Modal } from 'obsidian'
 
 export class FailureModal extends Modal {
     error: Error | string

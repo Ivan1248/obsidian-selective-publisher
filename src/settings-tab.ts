@@ -2,6 +2,7 @@ import { App, PluginSettingTab, Setting, Notice, DropdownComponent, TextComponen
 import SelectivePublisherPlugin from './main'
 import { CriterionEditorModal } from './criterion-editor-modal'
 import { GitHelper } from './git-service'
+import { dialog } from '@electron/remote'
 
 export class SelectivePublisherSettingTab extends PluginSettingTab {
     plugin: SelectivePublisherPlugin
@@ -37,14 +38,13 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                 .setTooltip('Select content directory in repository')
                 .onClick(async () => {
                     try {
-                        const { dialog } = require('electron').remote
                         const result = await dialog.showOpenDialog({
                             properties: ['openDirectory'],
                             defaultPath: this.plugin.settings.publishRepo
                         })
 
                         if (!result.canceled && result.filePaths.length > 0) {
-                            const selectedPath = result.filePaths[0]
+                            const selectedPath = result.filePaths[0]!
                             this.plugin.settings.publishRepo = selectedPath
                             repoText.setValue(selectedPath)
                             await this.plugin.saveSettings()
@@ -64,7 +64,7 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
             .setDesc('Branch to push the published notes to.')
             .addDropdown((dropdown) => {
                 branchDropdown = dropdown
-                this.refreshBranchDropdown(dropdown)
+                void this.refreshBranchDropdown(dropdown)
                 dropdown.onChange(async (value) => {
                     this.plugin.settings.publishBranch = value
                     await this.plugin.saveSettings()
@@ -106,10 +106,9 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                 .setButtonText('Edit criterion')
                 .setCta()
                 .onClick(() => {
-                    new CriterionEditorModal(this.app, this.plugin.settings.criterion, async (updatedCriterion) => {
+                    new CriterionEditorModal(this.app, this.plugin.settings.criterion, (updatedCriterion) => {
                         this.plugin.settings.criterion = updatedCriterion
-                        await this.plugin.saveSettings()
-                        this.display()
+                        void this.plugin.saveSettings().then(() => this.display())
                     }).open()
                 })
             )
@@ -122,9 +121,9 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
             text: this.plugin.settings.criterion.getSummary(),
             cls: 'sp-criterion-summary',
         })
-
+        
         // Initial validation
-        this.validateAndRefreshBranches(branchDropdown!)
+        void this.validateAndRefreshBranches(branchDropdown!)
     }
 
     async validateAndRefreshBranches(dropdown?: DropdownComponent) {

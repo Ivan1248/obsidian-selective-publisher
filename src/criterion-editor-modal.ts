@@ -182,7 +182,7 @@ export class CriterionEditorModal extends Modal {
             case CriterionType.And: return new AndCriterion([this.createDefaultCriterionByType(CriterionType.Tag)])
             case CriterionType.Or: return new OrCriterion([this.createDefaultCriterionByType(CriterionType.Tag)])
             case CriterionType.Not: return new NotCriterion(new TagCriterion('private'))
-            default: throw new Error(`Unknown criterion type: ${type}`)
+            default: throw new Error(`Unknown criterion type: ${type as string}`)
         }
     }
 }
