@@ -90,8 +90,8 @@ export default class SelectivePublisherPlugin extends Plugin {
 
 			// Find files that would be deleted (exist in repo but not publishable)
 			const publishablePaths = new Set(publishableFiles.map(f => f.path))
-			const publishedFiles = await this.getPublishedMarkdownFiles()
-			const deletedStatuses: FileWithStatus[] = publishedFiles
+			const publishedPaths = await this.getPublishedMarkdownFiles()
+			const deletedStatuses: FileWithStatus[] = publishedPaths
 				.filter(publishedPath => !publishablePaths.has(publishedPath))
 				.map(publishedPath => ({ path: publishedPath, status: FileUpdateStatus.Deleted }))
 
@@ -109,7 +109,6 @@ export default class SelectivePublisherPlugin extends Plugin {
 			modal.open()
 		} catch (error) {
 			console.error('Preview failed:', error)
-			// new Notice(`Preview failed: ${(error as Error).message}`)
 			new FailureModal(this.app, error as Error, this.settings.publishRepo).open()
 		}
 	}
@@ -150,7 +149,6 @@ export default class SelectivePublisherPlugin extends Plugin {
 			}
 		} catch (error) {
 			console.error('Publishing failed:', error)
-			// new Notice(`Publishing failed: ${(error as Error).message}`)
 			new FailureModal(this.app, error as Error, this.settings.publishRepo).open()
 		}
 	}
@@ -196,7 +194,7 @@ export default class SelectivePublisherPlugin extends Plugin {
 	}
 
 	static processContent(content: string, file: TFile): string {
-		// Here could be a transformations needed for publishing if necessary
+		// Here could be a transformation for publishing if needed
 		return content
 	}
 
@@ -231,14 +229,12 @@ export default class SelectivePublisherPlugin extends Plugin {
 	async cleanupPublishRepo(publishableFiles: TFile[]) {
 		try {
 			// Get set of paths that should be published
-			const shouldPublish = new Set(publishableFiles.map(f => f.path))
-
-			// Get all markdown files currently in publish repo
-			const publishedFiles = await this.getPublishedMarkdownFiles()
+			const publishablePaths = new Set(publishableFiles.map(f => f.path))
+			const publishedPaths = await this.getPublishedMarkdownFiles()
 
 			// Remove files that shouldn't be there
-			for (const publishedPath of publishedFiles) {
-				if (!shouldPublish.has(publishedPath)) {
+			for (const publishedPath of publishedPaths) {
+				if (!publishablePaths.has(publishedPath)) {
 					await this.deleteFileFromPublishRepo(publishedPath)
 				}
 			}

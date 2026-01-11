@@ -9,21 +9,15 @@ export const enum FileUpdateStatus {
 }
 
 export async function getFileStatus(srcFile: TFile, destPath: string): Promise<FileUpdateStatus> {
-    let isNew = false
-    let isModified = false
-
     try {
         const stats = await fs.stat(destPath)
-        // Obsidian mtime is in ms, fs.stat mtimeMs is in ms
-        if (srcFile.stat.mtime > stats.mtimeMs) {
-            isModified = true
+        if (srcFile.stat.mtime > stats.mtimeMs) {  // Obsidian mtime is in ms
+            return FileUpdateStatus.Modified
         }
     } catch {
-        // File doesn't exist in repo
-        isNew = true
+        return FileUpdateStatus.New
     }
-
-    return isNew ? FileUpdateStatus.New : isModified ? FileUpdateStatus.Modified : FileUpdateStatus.Unmodified
+    return FileUpdateStatus.Unmodified
 }
 
 export interface FileWithStatus {
