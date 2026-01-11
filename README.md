@@ -5,9 +5,9 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 ## Features
 <!-- ![Screenshot of Plugin](path/to/screenshot.png) -->
 
-- **Selective publishing**: Filtering of notes based on tags, frontmatter, paths, or content.
-- **Git integration**: Committing and pushing to a target repository.
-- **Publishing preview**: Review of changed files (new, modified, or deleted files) before publishing.
+- Filtering of notes based on tags, frontmatter, paths, or content.
+- Committing and pushing to a target Git repository.
+- Review of changed files (added, modified, deleted) before publishing.
 
 ## Requirements
 
@@ -19,22 +19,21 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 
 1. Search for "Selective Publisher" in Obsidian's Community Plugins.
 2. Click "Install" and then "Enable".
-3. Configure the plugin settings (see below).
 
 ## Setup
 
 1. Clone your target repository (e.g., GitHub Pages) to a local folder.
 2. In the plugin settings:
    - Set "Publishing directory" to the local clone's absolute path or a directory within it.
-   - Optionally, set "Publishing branch" (e.g., `main`).
+   - Optionally, change the "Publishing branch" (e.g., `main`).
    - Configure "Publishing criterion" (see below).
+   - Optionally, uncheck "Show preview before publishing" to skip the preview modal when publishing.
 
 ## Usage
 
 ### Publishing criterion
 
 The plugin evaluates each markdown file against a tree combining criteria:
-
 - **Tag**: Matches exact Obsidian tag or hierarchical subtags (e.g., `public` matches `#public/blog`).
 - **Frontmatter**: Matches a specific key and value in YAML frontmatter, with support for regex in the value field.
 - **Folder**: Includes or excludes specific directories.
@@ -42,10 +41,7 @@ The plugin evaluates each markdown file against a tree combining criteria:
 - **Path**: Matches the relative path from vault root. Supports substring or regex.
 - **Content**: Matches body text based on a regex search.
 
-Criteria can be combined using:
-- **AND**: All child criteria must be true.
-- **OR**: At least one child criterion must be true.
-- **NOT**: Inverts the result of the child criterion.
+Criteria can be combined with logical operators: **AND**, **OR**, and **NOT**.
 
 ### Publishing
 
@@ -63,10 +59,10 @@ You can choose to publish (commit and push) or just commit (local only).
 - **Preview publishable notes**: Preview files that match the criteria with their status (new, modified, deleted, unmodified).
 - **Ribbon button** (paper plane icon): Quick shortcut to publish notes.
 
-## Privacy
+## Other information
 
-- All Git operations are executed locally.
-- No data is sent to external servers except via the configured Git remote.
+- Privacy: All Git operations are executed locally. No data is sent to external servers except via the Git remote.
+- AI agents used in development: Claude 3.7, GPT-4o, Claude 4.5 Opus, Gemini 3 Flash, Gemini 3 Pro, Claude 4.5 Haiku.
 
 ## Related projects
 
