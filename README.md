@@ -3,7 +3,7 @@
 A plugin for Obsidian that selectively publishes notes to a Git repository based on customizable criteria.
 
 ## Features
-<!-- ![Screenshot of Plugin](path/to/screenshot.png) -->
+![Screenshot of Plugin](docs/images/screens.webp)
 
 - Filtering of notes based on tags, frontmatter, paths, or content.
 - Committing and pushing to a target Git repository.
