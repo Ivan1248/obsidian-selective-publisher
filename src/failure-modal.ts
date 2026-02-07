@@ -16,7 +16,7 @@ export class FailureModal extends Modal {
 
         contentEl.createEl('h2', { text: 'Publishing failed' })
         contentEl.createEl('p', { text: 'An error occurred while publishing:' })
-        
+
         const errorMsg = this.error instanceof Error ? this.error.message : String(this.error)
         const pre = contentEl.createEl('pre', { cls: 'sp-error-log' })
         pre.setText(errorMsg)

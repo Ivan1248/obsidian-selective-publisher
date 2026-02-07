@@ -12,8 +12,9 @@
   "keywords": [
     "obsidian",
     "obsidian-plugin",
+    "publishing",
+    "git",
     "github-pages",
-    "publishing"
   ],
   "author": "Ivan Grubišić",
   "license": "MIT",

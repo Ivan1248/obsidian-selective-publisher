@@ -4,10 +4,10 @@ import { promisify } from 'util'
 const execFileAsync = promisify(execFile)
 
 interface ExecFileError extends Error {
-    code?: string | number;
-    cmd?: string;
-    stdout?: string;
-    stderr?: string;
+    code?: string | number
+    cmd?: string
+    stdout?: string
+    stderr?: string
 }
 
 export interface RepoValidationResult {

@@ -26,9 +26,9 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
             .addText((text) => {
                 repoText = text
                 text.setPlaceholder('Enter repository path')
-                    .setValue(this.plugin.settings.publishRepo)
+                    .setValue(this.plugin.settings.repo)
                     .onChange(async (value) => {
-                        this.plugin.settings.publishRepo = value
+                        this.plugin.settings.repo = value
                         await this.plugin.saveSettings()
                         await this.validateAndRefreshBranches(branchDropdown)
                     })
@@ -40,12 +40,12 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                     try {
                         const result = await dialog.showOpenDialog({
                             properties: ['openDirectory'],
-                            defaultPath: this.plugin.settings.publishRepo
+                            defaultPath: this.plugin.settings.repo
                         })
 
                         if (!result.canceled && result.filePaths.length > 0) {
                             const selectedPath = result.filePaths[0]!
-                            this.plugin.settings.publishRepo = selectedPath
+                            this.plugin.settings.repo = selectedPath
                             repoText.setValue(selectedPath)
                             await this.plugin.saveSettings()
                             await this.validateAndRefreshBranches(branchDropdown)
@@ -66,7 +66,7 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                 branchDropdown = dropdown
                 void this.refreshBranchDropdown(dropdown)
                 dropdown.onChange(async (value) => {
-                    this.plugin.settings.publishBranch = value
+                    this.plugin.settings.repoBranch = value
                     await this.plugin.saveSettings()
                 })
             })
@@ -121,13 +121,13 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
             text: this.plugin.settings.criterion.getSummary(),
             cls: 'sp-criterion-summary',
         })
-        
+
         // Initial validation
         void this.validateAndRefreshBranches(branchDropdown!)
     }
 
     async validateAndRefreshBranches(dropdown?: DropdownComponent) {
-        const result = await GitHelper.validateRepo(this.plugin.settings.publishRepo)
+        const result = await GitHelper.validateRepo(this.plugin.settings.repo)
         if (!result.isValid) {
             new Notice(result.error || 'Invalid repository path')
         }
@@ -137,7 +137,7 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
     }
 
     async refreshBranchDropdown(dropdown: DropdownComponent) {
-        const branches = await GitHelper.getBranches(this.plugin.settings.publishRepo)
+        const branches = await GitHelper.getBranches(this.plugin.settings.repo)
             .catch(() => [] as string[])
 
         // Clear existing options
@@ -147,7 +147,7 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
         if (branches.length === 0) {
             dropdown.addOption('', 'No branches found')
             dropdown.setDisabled(true)
-            this.plugin.settings.publishBranch = ''
+            this.plugin.settings.repoBranch = ''
         } else {
             dropdown.setDisabled(false)
             branches.forEach(branch => {
@@ -155,14 +155,14 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
             })
 
             // Ensure a valid branch is selected
-            if (!branches.includes(this.plugin.settings.publishBranch)) {
+            if (!branches.includes(this.plugin.settings.repoBranch)) {
                 // If current branch is not in list, select the first one and save
-                this.plugin.settings.publishBranch = branches[0]!
+                this.plugin.settings.repoBranch = branches[0]!
                 await this.plugin.saveSettings()
             }
         }
 
-        dropdown.setValue(this.plugin.settings.publishBranch)
+        dropdown.setValue(this.plugin.settings.repoBranch)
     }
 
 

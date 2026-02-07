@@ -1,29 +1,5 @@
-import { App, Modal, TFile, ButtonComponent, Setting } from 'obsidian'
-import * as fs from 'fs/promises'
-
-export const enum FileUpdateStatus {
-    New = 'new',
-    Modified = 'modified',
-    Unmodified = 'unmodified',
-    Deleted = 'deleted',
-}
-
-export async function getFileStatus(srcFile: TFile, destPath: string): Promise<FileUpdateStatus> {
-    try {
-        const stats = await fs.stat(destPath)
-        if (srcFile.stat.mtime > stats.mtimeMs) {  // Obsidian mtime is in ms
-            return FileUpdateStatus.Modified
-        }
-    } catch {
-        return FileUpdateStatus.New
-    }
-    return FileUpdateStatus.Unmodified
-}
-
-export interface FileWithStatus {
-    path: string
-    status: FileUpdateStatus
-}
+import { App, Modal, ButtonComponent, Setting } from 'obsidian'
+import { FileWithStatus, FileUpdateStatus } from './publishing-service'
 
 export type PublishAction = 'publish' | 'commit'
 

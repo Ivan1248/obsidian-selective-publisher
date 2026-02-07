@@ -23,7 +23,7 @@ const registry: Map<CriterionType, typeof Criterion> = new Map()
 
 // Type for criterion class constructors that can be registered
 interface CriterionClass {
-    new (...args: unknown[]): Criterion
+    new(...args: unknown[]): Criterion
     deserialize(data: SerializedCriterion): Criterion
 }
 
@@ -81,7 +81,7 @@ export class FrontmatterCriterion extends Criterion {
     evaluate(file: TFile, content: string, metadata: CachedMetadata): boolean {
         const frontmatterValue = metadata?.frontmatter?.[this.key] as unknown
         if (frontmatterValue === undefined) return false
-        
+
         const regex = new RegExp(`^${this.value}$`, 'i')
         return regex.test(stringifyValue(frontmatterValue))
     }
@@ -216,7 +216,7 @@ export class PathCriterion extends Criterion {
 }
 
 function indentText(text: string, spaces: number): string {
-    return text.replace(/^/gm, ' '.repeat(spaces));
+    return text.replace(/^/gm, ' '.repeat(spaces))
 }
 
 @RegisterCriterion
@@ -237,8 +237,8 @@ export class AndCriterion extends Criterion {
     }
 
     getSummary(): string {
-        const indentedChildren = this.criteria.map(c => indentText(c.getSummary(), 2)).join('\n');
-        return `AND:\n${indentedChildren}`;
+        const indentedChildren = this.criteria.map(c => indentText(c.getSummary(), 2)).join('\n')
+        return `AND:\n${indentedChildren}`
     }
 
     serialize(): SerializedCriterion {
@@ -268,8 +268,8 @@ export class OrCriterion extends Criterion {
     }
 
     getSummary(): string {
-        const indentedChildren = this.criteria.map(c => indentText(c.getSummary(), 2)).join('\n');
-        return `OR:\n${indentedChildren}`;
+        const indentedChildren = this.criteria.map(c => indentText(c.getSummary(), 2)).join('\n')
+        return `OR:\n${indentedChildren}`
     }
 
     serialize(): SerializedCriterion {
