@@ -8,12 +8,13 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 - Filtering of notes based on tags, frontmatter, paths, or content.
 - Committing and pushing to a target Git repository.
 - Review of changed files (added, modified, deleted) before publishing.
+- 
 
 ## Requirements
 
 - Obsidian v0.15.0+
 - Git installed and configured locally.
-- A local clone of target remote repository.
+- A local clone of target remote repository. The repository can contain static site generation workflows such as [Quartz v4](https://github.com/jackyzha0/quartz).
 
 ## Installation
 
@@ -61,9 +62,12 @@ You can choose to publish (commit and push) or just commit (local only).
 
 ## Other information
 
-- Privacy: All Git operations are executed locally. No data is sent to external servers except via the Git remote.
+- All Git operations are executed locally. No data is sent to external servers except via the Git remote.
 - AI agents used in development: Claude 3.7, GPT-4o, Claude 4.5 Opus, Gemini 3 Flash, Gemini 3 Pro, Claude 4.5 Haiku.
 
 ## Related projects
 
 - [Enveloppe](https://github.com/Enveloppe/obsidian-enveloppe)
+   - Publishes via the GitHub API.
+   - Doesn't require Git and a local repository.
+   - Has more features and options, including processing of links and dataviews.
