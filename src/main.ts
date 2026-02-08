@@ -56,8 +56,8 @@ export default class SelectivePublisherPlugin extends Plugin {
         // Add preview command
         this.addCommand({
             id: 'preview-publishable',
-            name: 'Preview publishable notes',
-            callback: () => this.previewPublishableNotes(),
+            name: 'Preview publishable files',
+            callback: () => this.previewPublishableFiles(),
         })
 
         // Add a ribbon icon
@@ -123,7 +123,7 @@ export default class SelectivePublisherPlugin extends Plugin {
         return attachments
     }
 
-    async previewPublishableNotes() {
+    async previewPublishableFiles() {
         try {
             const publishableFiles = await this.getPublishableFiles()
             const fileStatuses = await this.publishingService.getPublishingStatuses(publishableFiles)
@@ -145,7 +145,7 @@ export default class SelectivePublisherPlugin extends Plugin {
     async publishNotes(onlyCommit = false, skipPreview = false) {
         try {
             if (!skipPreview && this.settings.showPreviewBeforePublishing) {
-                await this.previewPublishableNotes()
+                await this.previewPublishableFiles()
                 return
             }
 

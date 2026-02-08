@@ -5,10 +5,9 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 ## Features
 ![Screenshot of Plugin](docs/images/screens.webp)
 
-- Filtering of notes based on tags, frontmatter, paths, or content.
+- Filtering of notes and attachemnts based on tags, frontmatter, path, or content, and path-based filtering of other files.
 - Committing and pushing to a target Git repository.
 - Review of changed files (added, modified, deleted) before publishing.
-- 
 
 ## Requirements
 
@@ -57,13 +56,13 @@ You can choose to publish (commit and push) or just commit (local only).
 ### Commands
 
 - **Publish notes**: Publish all matching notes. Shows preview first if enabled in settings.
-- **Preview publishable notes**: Preview files that match the criteria with their status (new, modified, deleted, unmodified).
+- **Preview publishable files**: Preview files that match the criteria with their status (new, modified, deleted, unmodified).
 - **Ribbon button** (paper plane icon): Quick shortcut to publish notes.
 
 ## Other information
 
 - All Git operations are executed locally. No data is sent to external servers except via the Git remote.
-- AI agents used in development: Claude 3.7, GPT-4o, Claude 4.5 Opus, Gemini 3 Flash, Gemini 3 Pro, Claude 4.5 Haiku.
+- AI agents used in development: Claude 3.7, GPT-4o, Claude 4.5 Opus, Gemini 3 Flash, Gemini 3 Pro, Claude 4.5 Haiku, GPT-5.2, Claude 4.5 Opus.
 
 ## Related projects
 

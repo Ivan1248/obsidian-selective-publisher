@@ -113,8 +113,8 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                 })
             )
             .addButton((btn) => btn
-                .setButtonText('Preview publishable notes')
-                .onClick(this.plugin.previewPublishableNotes.bind(this.plugin))
+                .setButtonText('Preview publishable files')
+                .onClick(this.plugin.previewPublishableFiles.bind(this.plugin))
             )
 
         containerEl.createEl('pre', {
