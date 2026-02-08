@@ -1,7 +1,7 @@
 import { Notice, Plugin, TFile } from 'obsidian'
 import { PublishPreviewModal, PublishAction } from './publish-preview-modal'
 import { FailureModal } from './failure-modal'
-import { Criterion, PathCriterion, AndCriterion, NotCriterion, TagCriterion, TitleCriterion } from './criterion'
+import { Criterion, MatchMode, PathCriterion, OrCriterion, NotCriterion, TagCriterion, TitleCriterion, matchesGlobPatterns } from './criterion'
 import { SelectivePublisherSettingTab } from './settings-tab'
 import { GitHelper } from './git-service'
 import { PublishingService } from './publishing-service'
@@ -12,6 +12,8 @@ interface SelectivePublisherSettings {
     criterion: Criterion
     commitMessage: string
     showPreviewBeforePublishing: boolean
+    publishAttachments: boolean
+    extraFilePatterns: string
 }
 
 async function filterAsync<T>(arr: T[], cond: (el: T) => Promise<boolean>): Promise<T[]> {
@@ -23,12 +25,16 @@ async function filterAsync<T>(arr: T[], cond: (el: T) => Promise<boolean>): Prom
 const DEFAULT_SETTINGS: SelectivePublisherSettings = {
     repo: '/path/to/publish/repo',
     repoBranch: 'main',
-    criterion: new AndCriterion([
-        new PathCriterion('^(?!.*(?:^|[\\/])_).*', true),
-        new NotCriterion(new TagCriterion('todo')),
-        new NotCriterion(new TitleCriterion('^Untitled.*', true))]),
+    criterion: new NotCriterion(new OrCriterion([
+        new PathCriterion('**/_*\n_*', MatchMode.Glob),
+        new TagCriterion('todo'),
+        new TitleCriterion('Untitled*', MatchMode.Glob),
+        new TitleCriterion('^\\d+-\\d+-\\d+$', MatchMode.Regex),
+    ])),
     commitMessage: 'Update published notes',
     showPreviewBeforePublishing: true,
+    publishAttachments: true,
+    extraFilePatterns: '*.sty\n*.bib',
 }
 
 export default class SelectivePublisherPlugin extends Plugin {
@@ -69,12 +75,52 @@ export default class SelectivePublisherPlugin extends Plugin {
 
     async updateStatusBar() {
         const publishableFiles = await this.getPublishableFiles()
-        this.statusBarItem.setText(`${publishableFiles.length} publishable notes`)
+        const noteCount = publishableFiles.filter(f => f.extension === 'md').length
+        this.statusBarItem.setText(`${noteCount} publishable notes`)
     }
 
     async getPublishableFiles(): Promise<TFile[]> {
-        const files = this.app.vault.getMarkdownFiles()
-        return await this.filterPublishableFiles(files)
+        const markdownFiles = this.app.vault.getMarkdownFiles()
+        const publishableNotes = await this.filterPublishableFiles(markdownFiles)
+
+        const publishableSet = new Set<TFile>()
+        for (const file of publishableNotes) {
+            publishableSet.add(file)
+        }
+
+        if (this.settings.publishAttachments) {
+            for (const file of publishableNotes) {
+                const referencedAttachments = this.getReferencedAttachments(file)
+                referencedAttachments.forEach(attachment => publishableSet.add(attachment))
+            }
+        }
+
+        if (this.settings.extraFilePatterns.trim()) {
+            const allFiles = this.app.vault.getFiles().filter(f => matchesGlobPatterns(this.settings.extraFilePatterns, f.path.replace(/\\/g, '/')))
+            for (const file of allFiles) {
+                publishableSet.add(file)
+            }
+        }
+
+        return Array.from(publishableSet)
+    }
+
+    private getReferencedAttachments(file: TFile): TFile[] {
+        const metadata = this.app.metadataCache.getFileCache(file)
+        if (!metadata) return []
+
+        const attachments: TFile[] = []
+        const links = [...(metadata.links ?? []), ...(metadata.embeds ?? [])]
+
+        for (const link of links) {
+            const linkPath = link.link.split('#')[0]!
+            const linkedFile = this.app.metadataCache.getFirstLinkpathDest(linkPath, file.path)
+            if (linkedFile instanceof TFile && linkedFile.extension !== 'md') {
+                attachments.push(linkedFile)
+            }
+        }
+
+        return attachments
     }
 
     async previewPublishableNotes() {
@@ -131,7 +177,8 @@ export default class SelectivePublisherPlugin extends Plugin {
                 if (!onlyCommit) {
                     await GitHelper.push(this.settings.repo, this.settings.repoBranch)
                 }
-                new Notice(`Successfully ${operationStr}ed ${publishableFiles.length} notes.`)
+                const noteCount = publishableFiles.filter(f => f.extension === 'md').length
+                new Notice(`Successfully ${operationStr}ed ${noteCount} notes.`)
             } catch (error) {
                 console.error('Git operation failed:', error)
                 throw new Error(`Git operation failed: ${(error as Error).message}`)
@@ -176,6 +223,12 @@ export default class SelectivePublisherPlugin extends Plugin {
             if (data.commitMessage) this.settings.commitMessage = data.commitMessage
             if (data.showPreviewBeforePublishing !== undefined) {
                 this.settings.showPreviewBeforePublishing = data.showPreviewBeforePublishing
+            }
+            if (data.publishAttachments !== undefined) {
+                this.settings.publishAttachments = data.publishAttachments
+            }
+            if (data.extraFilePatterns !== undefined) {
+                this.settings.extraFilePatterns = data.extraFilePatterns
             }
         }
     }

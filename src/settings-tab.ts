@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting, Notice, DropdownComponent, TextComponent } from 'obsidian'
 import SelectivePublisherPlugin from './main'
-import { CriterionEditorModal } from './criterion-editor-modal'
+import { CriterionEditorModal, addGlobField } from './criterion-editor-modal'
 import { GitHelper } from './git-service'
 import { dialog } from '@electron/remote'
 
@@ -101,7 +101,7 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
         // Criteria editor and a label representing the current criterion
         new Setting(containerEl)
             .setName('Publishing criterion')
-            .setDesc('The criterion for selecting notes to publish.')
+            .setDesc('The criterion for selecting markdown notes to publish.')
             .addButton((btn) => btn
                 .setButtonText('Edit criterion')
                 .setCta()
@@ -121,6 +121,30 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
             text: this.plugin.settings.criterion.getSummary(),
             cls: 'sp-criterion-summary',
         })
+
+        // Publish attachments
+        new Setting(containerEl)
+            .setName('Publish attachments')
+            .setDesc('Publish attachments referenced in publishable notes.')
+            .addToggle((toggle) =>
+                toggle.setValue(this.plugin.settings.publishAttachments)
+                    .onChange(async (value) => {
+                        this.plugin.settings.publishAttachments = value
+                        await this.plugin.saveSettings()
+                        await this.plugin.updateStatusBar()
+                    })
+            )
+
+        // Extra file patterns
+        const extraPatternsSetting = new Setting(containerEl)
+            .setName('Extra file patterns')
+            .setDesc('Glob patterns (one per line) for additional vault files to publish, regardless of the publishing criterion. Supports !, #, and ** syntax.')
+        addGlobField(containerEl, extraPatternsSetting, () => this.plugin.settings.extraFilePatterns, async (value) => {
+            this.plugin.settings.extraFilePatterns = value
+            await this.plugin.saveSettings()
+            await this.plugin.updateStatusBar()
+        })
+
 
         // Initial validation
         void this.validateAndRefreshBranches(branchDropdown!)

@@ -1,17 +1,24 @@
 import { TFile, CachedMetadata } from 'obsidian'
+import picomatch from 'picomatch'
 
 // Serialization
 
 export enum CriterionType {
     Tag = 'Tag',
     Frontmatter = 'Frontmatter',
-    Folder = 'Folder',
+    //Folder = 'Folder',
     Title = 'Title',
     Path = 'Path',
     Content = 'Content',
     And = 'And',
     Or = 'Or',
     Not = 'Not',
+}
+
+export enum MatchMode {
+    Contains = 'contains',
+    Regex = 'regex',
+    Glob = 'glob',
 }
 
 export interface SerializedCriterion {
@@ -50,6 +57,66 @@ function safeRegexTest(pattern: string, input: string, flags = 'i'): boolean {
         console.error(`Invalid regex pattern: ${pattern}`)
         return false
     }
+}
+
+const GLOB_OPTIONS = { dot: true, contains: true }
+
+/**
+ * Information extracted from a single line of a glob pattern.
+ */
+interface GlobLineInfo {
+    negated: boolean
+    glob: string
+}
+
+/**
+ * Parses a single line of a .gitignore-style glob pattern.
+ * Handles trimming, comments (#), and negation (!).
+ */
+function parseGlobLine(line: string): GlobLineInfo {
+    const trimmed = line.trim()
+    if (trimmed === '' || trimmed.startsWith('#')) {
+        return { negated: false, glob: '' }
+    }
+    const negated = trimmed.startsWith('!')
+    const glob = negated ? trimmed.slice(1) : trimmed
+    return { negated, glob }
+}
+
+/**
+ * Returns true if the given line is a valid .gitignore-style glob pattern.
+ */
+export function isValidGlobPattern(line: string, allowNegated: boolean = false, allowEmptyOrComment: boolean = false): boolean {
+    const { negated, glob } = parseGlobLine(line)
+    if (glob.length === 0) return allowEmptyOrComment
+    try {
+        picomatch(glob, GLOB_OPTIONS)
+        return allowNegated || !negated
+    } catch {
+        return false
+    }
+}
+
+/**
+ * Test a value against line-separated .gitignore-style glob patterns.
+ * Supports # comments, ! negation, and last-match-wins semantics.
+ */
+export function matchesGlobPatterns(multiLinePattern: string, input: string): boolean {
+    let matched = false
+    for (const rawLine of multiLinePattern.split('\n')) {
+        const { negated, glob } = parseGlobLine(rawLine)
+        if (glob.length === 0) continue
+
+        try {
+            const isMatch = picomatch(glob, GLOB_OPTIONS)
+            if (isMatch(input)) {
+                matched = !negated
+            }
+        } catch {
+            console.error(`Invalid glob pattern: ${glob}`)
+        }
+    }
+    return matched
 }
 
 export abstract class Criterion {
@@ -99,6 +166,7 @@ export class FrontmatterCriterion extends Criterion {
     }
 }
 
+/*
 @RegisterCriterion
 export class FolderCriterion extends Criterion {
     type = CriterionType.Folder
@@ -133,6 +201,7 @@ export class FolderCriterion extends Criterion {
         return new FolderCriterion(data.includeFolders as string[], data.excludeFolders as string[])
     }
 }
+*/
 
 @RegisterCriterion
 export class ContentCriterion extends Criterion {
@@ -159,59 +228,75 @@ export class ContentCriterion extends Criterion {
     }
 }
 
-@RegisterCriterion
-export class TitleCriterion extends Criterion {
-    type = CriterionType.Title
 
-    constructor(public pattern: string = '', public isRegex: boolean) {
+// Superclass for pattern-based criteria with configurable match mode
+export abstract class PatternCriterion extends Criterion {
+    abstract type: CriterionType
+    constructor(public pattern: string, public matchMode: MatchMode) {
         super()
     }
 
+    // Abstract: must provide the value to match against
+    protected abstract getTargetValue(file: TFile): string
+
     evaluate(file: TFile, _content: string, _metadata: CachedMetadata): boolean {
-        if (this.isRegex) {
-            return safeRegexTest(this.pattern, file.basename)
+        const value = this.getTargetValue(file)
+        switch (this.matchMode) {
+            case MatchMode.Regex:
+                return safeRegexTest(this.pattern, value)
+            case MatchMode.Glob:
+                return matchesGlobPatterns(this.pattern, value)
+            case MatchMode.Contains:
+            default:
+                return value.toLowerCase().includes(this.pattern.toLowerCase())
         }
-        return file.basename.toLowerCase().includes(this.pattern.toLowerCase())
     }
 
     getSummary(): string {
-        return `Title ${this.isRegex ? 'matches regex' : 'contains'}: ${this.pattern}`
+        const descr = CriterionType[this.type] ?? 'Pattern'
+        const modeLabel = this.matchMode === MatchMode.Regex ? 'matches regex'
+            : this.matchMode === MatchMode.Glob ? 'matches glob'
+                : 'contains'
+        return `${descr} ${modeLabel}: ${this.pattern}`
     }
 
     serialize(): SerializedCriterion {
-        return { type: this.type, pattern: this.pattern, isRegex: this.isRegex }
-    }
-
-    static deserialize(data: SerializedCriterion): TitleCriterion {
-        return new TitleCriterion(data.pattern as string, data.isRegex as boolean)
+        return { type: this.type, pattern: this.pattern, matchMode: this.matchMode }
     }
 }
 
 @RegisterCriterion
-export class PathCriterion extends Criterion {
+export class TitleCriterion extends PatternCriterion {
+    type = CriterionType.Title
+
+    constructor(public pattern: string = '', public matchMode: MatchMode) {
+        super(pattern, matchMode)
+    }
+
+    protected getTargetValue(file: TFile): string {
+        return file.basename
+    }
+
+    static deserialize(data: SerializedCriterion): TitleCriterion {
+        return new TitleCriterion(data.pattern as string, data.matchMode as MatchMode)
+    }
+}
+
+@RegisterCriterion
+export class PathCriterion extends PatternCriterion {
     type = CriterionType.Path
 
-    constructor(public pattern: string, public isRegex: boolean) {
-        super()
+    constructor(public pattern: string, public matchMode: MatchMode) {
+        super(pattern, matchMode)
     }
 
-    evaluate(file: TFile, _content: string, _metadata: CachedMetadata): boolean {
-        if (this.isRegex) {
-            return safeRegexTest(this.pattern, file.path)
-        }
-        return file.path.toLowerCase().replace(/\\/g, '/').includes(this.pattern.toLowerCase())
-    }
-
-    getSummary(): string {
-        return `Path ${this.isRegex ? 'matches regex' : 'contains'}: ${this.pattern}`
-    }
-
-    serialize(): SerializedCriterion {
-        return { type: this.type, pattern: this.pattern, isRegex: this.isRegex }
+    protected getTargetValue(file: TFile): string {
+        // Normalize path separators for consistency
+        return file.path.replace(/\\/g, '/')
     }
 
     static deserialize(data: SerializedCriterion): PathCriterion {
-        return new PathCriterion(data.pattern as string, data.isRegex as boolean)
+        return new PathCriterion(data.pattern as string, data.matchMode as MatchMode)
     }
 }
 

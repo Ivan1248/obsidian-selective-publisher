@@ -28,7 +28,7 @@ export class PublishingService {
 
         // Find files that would be deleted (exist in repo but not publishable)
         const publishablePaths = new Set(publishableFiles.map(f => f.path))
-        const publishedPaths = await this.getPublishedMarkdownFiles()
+        const publishedPaths = await this.getPublishedFiles()
         const deletedStatuses: FileWithStatus[] = publishedPaths
             .filter(publishedPath => !publishablePaths.has(publishedPath))
             .map(publishedPath => ({ path: publishedPath, status: FileUpdateStatus.Deleted }))
@@ -53,7 +53,7 @@ export class PublishingService {
         return FileUpdateStatus.Unmodified
     }
 
-    private async getPublishedMarkdownFiles(): Promise<string[]> {
+    private async getPublishedFiles(): Promise<string[]> {
         try {
             const publishedFiles: string[] = []
             const repoPath = this.repoPath
@@ -65,7 +65,7 @@ export class PublishingService {
                     // Skip .git and .obsidian directories
                     if (entry.isDirectory() && !entry.name.startsWith('.')) {
                         await scanDirectory(fullPath)
-                    } else if (entry.isFile() && entry.name.endsWith('.md')) {
+                    } else if (entry.isFile() && !entry.name.startsWith('.')) {
                         // Get relative path from repo root
                         const relativePath = path.relative(repoPath, fullPath).replace(/\\/g, '/')
                         publishedFiles.push(relativePath)
@@ -90,7 +90,7 @@ export class PublishingService {
         try {
             // Get set of paths that should be published
             const publishablePaths = new Set(publishableFiles.map(f => f.path))
-            const publishedPaths = await this.getPublishedMarkdownFiles()
+            const publishedPaths = await this.getPublishedFiles()
 
             // Remove files that shouldn't be there
             for (const publishedPath of publishedPaths) {
@@ -110,14 +110,19 @@ export class PublishingService {
     }
 
     private async copyFileToRepo(file: TFile) {
-        const content = await this.app.vault.read(file)
         const destPath = path.join(this.repoPath, file.path)
-
-        // Process content (modify links, etc. if needed)
-        const processedContent = PublishingService.processContent(content, file)
-
         await fs.mkdir(path.dirname(destPath), { recursive: true })
-        await fs.writeFile(destPath, processedContent)
+
+        if (file.extension === 'md') {
+            const content = await this.app.vault.read(file)
+            // Process content (modify links, etc. if needed)
+            const processedContent = PublishingService.processContent(content, file)
+            await fs.writeFile(destPath, processedContent)
+        } else {
+            // Support binary files
+            const buffer = await this.app.vault.readBinary(file)
+            await fs.writeFile(destPath, Buffer.from(buffer))
+        }
     }
 
     private async deleteFileFromRepo(relativePath: string) {

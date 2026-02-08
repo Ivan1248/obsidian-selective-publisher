@@ -1,5 +1,5 @@
 import { App, Modal, Setting } from 'obsidian'
-import { CriterionType, Criterion, FrontmatterCriterion, FolderCriterion, ContentCriterion, TitleCriterion, PathCriterion, AndCriterion, OrCriterion, NotCriterion, TagCriterion } from './criterion'
+import { CriterionType, MatchMode, Criterion, PatternCriterion, FrontmatterCriterion, ContentCriterion, TitleCriterion, PathCriterion, AndCriterion, OrCriterion, NotCriterion, TagCriterion, isValidGlobPattern } from './criterion'
 
 // Utility: validate regex pattern
 function isValidRegex(pattern: string): boolean {
@@ -21,7 +21,32 @@ function addRegexField(container: HTMLElement, setting: Setting, getValue: () =>
                 if (errorEl) { errorEl.remove(); errorEl = null }
 
                 if (!isValidRegex(value)) {
-                    errorEl = container.createEl('div', { text: 'Invalid regex', cls: 'sp-regex-error' })
+                    errorEl = container.createEl('div', { text: 'Invalid regex', cls: 'sp-pattern-error' })
+                }
+                setValue(value)
+            })
+    )
+}
+
+// Helper to add a textarea for line-separated .gitignore-like glob patterns with live validation
+// Supports: * ** ? [chars] ! (negate) # (comment) leading / (anchor)
+export function addGlobField(container: HTMLElement, setting: Setting, getValue: () => string, setValue: (v: string) => void) {
+    let errorEl: HTMLElement | null = null
+
+    setting.addTextArea((textArea) =>
+        textArea.setValue(getValue())
+            .onChange((value) => {
+                if (errorEl) { errorEl.remove(); errorEl = null }
+
+                const invalidLineNumbers = value.split('\n')
+                    .map((line, i) => isValidGlobPattern(line, true, true) ? -1 : i + 1)
+                    .filter(n => n !== -1)
+
+                if (invalidLineNumbers.length > 0) {
+                    const label = invalidLineNumbers.length === 1
+                        ? `Invalid glob pattern on line ${invalidLineNumbers[0]}`
+                        : `Invalid glob patterns on lines ${invalidLineNumbers.join(', ')}`
+                    errorEl = container.createEl('div', { text: label, cls: 'sp-pattern-error' })
                 }
                 setValue(value)
             })
@@ -113,40 +138,39 @@ export class CriterionEditorModal extends Modal {
             new Setting(criterionContainer).setName('Tag')
                 .addText((text) => text.setValue(criterion.tag).onChange((v) => criterion.tag = v))
 
-        } else if (criterion instanceof TitleCriterion) {
-            const setting = new Setting(criterionContainer).setName('Title pattern')
-            if (criterion.isRegex) {
-                addRegexField(criterionContainer, setting, () => criterion.pattern, (v) => criterion.pattern = v)
-            } else {
-                setting.addText((text) => text.setValue(criterion.pattern).onChange((v) => criterion.pattern = v))
+        } else if (criterion instanceof PatternCriterion) {
+            const patternSetting = new Setting(criterionContainer).setName((CriterionType[criterion.type] ?? 'Pattern') + ' pattern')
+            switch (criterion.matchMode) {
+                case MatchMode.Regex:
+                    addRegexField(criterionContainer, patternSetting, () => criterion.pattern, (v) => criterion.pattern = v)
+                    break
+                case MatchMode.Glob:
+                    addGlobField(criterionContainer, patternSetting, () => criterion.pattern, (v) => criterion.pattern = v)
+                    break
+                case MatchMode.Contains:
+                default:
+                    patternSetting.addText((text) => text.setValue(criterion.pattern).onChange((v) => criterion.pattern = v))
+                    break
             }
-            new Setting(criterionContainer).setName('Is regex')
-                .addToggle((toggle) => toggle.setValue(criterion.isRegex).onChange((v) => {
-                    criterion.isRegex = v
-                    this.renderCriterion(container, criterion, depth, parent, index, onDelete)
-                }))
+            new Setting(criterionContainer).setName('Match mode')
+                .addDropdown((dropdown) => {
+                    for (const mode of Object.values(MatchMode))
+                        dropdown.addOption(mode, mode.charAt(0).toUpperCase() + mode.slice(1))
+                    dropdown.setValue(criterion.matchMode)
+                        .onChange((v) => {
+                            criterion.matchMode = v as MatchMode
+                            this.renderCriterion(container, criterion, depth, parent, index, onDelete)
+                        })
+                })
 
-        } else if (criterion instanceof PathCriterion) {
-            const setting = new Setting(criterionContainer).setName('Path pattern')
-            if (criterion.isRegex) {
-                addRegexField(criterionContainer, setting, () => criterion.pattern, (v) => criterion.pattern = v)
-            } else {
-                setting.addText((text) => text.setValue(criterion.pattern).onChange((v) => criterion.pattern = v))
-            }
-            new Setting(criterionContainer).setName('Is regex')
-                .addToggle((toggle) => toggle.setValue(criterion.isRegex).onChange((v) => {
-                    criterion.isRegex = v
-                    this.renderCriterion(container, criterion, depth, parent, index, onDelete)
-                }))
-
-        } else if (criterion instanceof FolderCriterion) {
+        /*} else if (criterion instanceof FolderCriterion) {
             new Setting(criterionContainer).setName('Include folders')
                 .addTextArea((text) => text.setValue(criterion.includeFolders.join(', '))
                     .onChange((v) => criterion.includeFolders = v.split(',').map(s => s.trim())))
             new Setting(criterionContainer).setName('Exclude folders').setDesc('Comma-separated')
                 .addTextArea((text) => text.setValue(criterion.excludeFolders.join(', '))
                     .onChange((v) => criterion.excludeFolders = v.split(',').map(s => s.trim())))
-
+        */
         } else if (criterion instanceof ContentCriterion) {
             const setting = new Setting(criterionContainer).setName('Content regex')
             addRegexField(criterionContainer, setting, () => criterion.regex, (v) => criterion.regex = v)
@@ -175,9 +199,9 @@ export class CriterionEditorModal extends Modal {
         switch (type) {
             case CriterionType.Tag: return new TagCriterion('public')
             case CriterionType.Frontmatter: return new FrontmatterCriterion('public', 'true')
-            case CriterionType.Title: return new TitleCriterion('^[^_].*', true)
-            case CriterionType.Path: return new PathCriterion('^(?!.*[/_][^/_].*).*', true)
-            case CriterionType.Folder: return new FolderCriterion(['public'], [])
+            case CriterionType.Title: return new TitleCriterion('^[^_].*', MatchMode.Regex)
+            case CriterionType.Path: return new PathCriterion('^**/.*\n_*', MatchMode.Glob)
+            //case CriterionType.Folder: return new FolderCriterion(['public'], [])
             case CriterionType.Content: return new ContentCriterion('^(?!.*#todo)(?!.*#private).*')
             case CriterionType.And: return new AndCriterion([this.createDefaultCriterionByType(CriterionType.Tag)])
             case CriterionType.Or: return new OrCriterion([this.createDefaultCriterionByType(CriterionType.Tag)])
