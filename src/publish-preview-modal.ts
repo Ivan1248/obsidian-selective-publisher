@@ -1,4 +1,4 @@
-import { App, Modal, ButtonComponent, Setting } from 'obsidian'
+import { App, Modal, ButtonComponent } from 'obsidian'
 import { FileWithStatus, FileUpdateStatus } from './publishing-service'
 
 export type PublishAction = 'publish' | 'commit'
@@ -9,14 +9,15 @@ export class PublishPreviewModal extends Modal {
     }
 
     onOpen() {
-        const { contentEl } = this
+        const { contentEl, modalEl } = this
+        this.setTitle('Publishing preview')
+        modalEl.addClass('sp-publish-preview-modal')
         contentEl.empty()
-        contentEl.addClass('sp-publish-preview-modal')
-        contentEl.createEl('h2', { text: 'Publishing preview' })
 
         const sortedFiles = [...this.fileStatuses].sort((a, b) => a.path.localeCompare(b.path))
         const changed = sortedFiles.filter(f => f.status !== FileUpdateStatus.Unmodified)
         const unmodified = sortedFiles.filter(f => f.status === FileUpdateStatus.Unmodified)
+
         if (sortedFiles.length === 0 && !this.hasUncommittedChanges) {
             contentEl.createEl('p', { text: 'No files match the current publishing criteria and no files to unpublish.' })
         } else {
@@ -24,32 +25,40 @@ export class PublishPreviewModal extends Modal {
                 contentEl.createEl('p', { text: 'Published files are up to date. No changes to publish.' })
             } else {
                 this.renderFileList(contentEl, 'Changed files', changed)
-
-                const btnContainer = contentEl.createEl('div', { cls: 'modal-button-container' })
-                new ButtonComponent(btnContainer)
-                    .setButtonText('Publish')
-                    .setCta()
-                    .onClick(async () => {
-                        this.close()
-                        await this.onAction('publish')
-                    })
-
-                new ButtonComponent(btnContainer)
-                    .setButtonText('Commit')
-                    .onClick(async () => {
-                        this.close()
-                        await this.onAction('commit')
-                    })
             }
-
             this.renderFileList(contentEl, 'Unmodified published files', unmodified, true)
         }
+
+        const btnContainer = modalEl.createDiv('modal-button-container')
+
+        if (changed.length > 0 || this.hasUncommittedChanges) {
+            new ButtonComponent(btnContainer)
+                .setButtonText('Publish')
+                .setCta()
+                .onClick(async () => {
+                    this.close()
+                    await this.onAction('publish')
+                })
+
+            new ButtonComponent(btnContainer)
+                .setButtonText('Commit')
+                .onClick(async () => {
+                    this.close()
+                    await this.onAction('commit')
+                })
+        }
+
+        new ButtonComponent(btnContainer)
+            .setButtonText('Cancel')
+            .onClick(() => {
+                this.close()
+            })
     }
 
     private renderFileList(container: HTMLElement, title: string, files: FileWithStatus[], hideBadge = false) {
         if (files.length === 0) return
 
-        new Setting(container).setName(`${title} (${files.length})`).setHeading()
+        container.createEl('h4', { text: `${title} (${files.length})` })
         const listEl = container.createEl('ul', { cls: 'sp-publish-preview-list' })
 
         for (const { path, status } of files) {

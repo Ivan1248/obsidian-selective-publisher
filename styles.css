@@ -31,12 +31,28 @@
 /* Settings */
 
 
+/* Publishing preview modal layout: fixed buttons at bottom */
+
+.sp-publish-preview-modal {
+    display: flex;
+    flex-direction: column;
+}
+
+.sp-publish-preview-modal .modal-content {
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+.sp-publish-preview-modal .modal-button-container {
+    flex-shrink: 0;
+}
+
 /* Badges and list for publishing preview */
 
 .sp-publish-preview-list {
     list-style: none;
     padding: 0;
-    margin: 0.5em 0;
+    margin: 0;
     font-size: var(--font-ui-small);
 }
 
