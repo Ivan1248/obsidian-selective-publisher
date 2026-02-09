@@ -13,7 +13,7 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 
 - Obsidian v0.15.0+
 - Git installed and configured locally.
-- A local clone of target remote repository. The repository can contain static site generation workflows such as [Quartz v4](https://github.com/jackyzha0/quartz).
+- A local clone of target remote repository. The repository can contain static site generation workflows such as one based on [Quartz v4](https://github.com/jackyzha0/quartz).
 
 ## Installation
 
@@ -24,7 +24,7 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 
 1. Clone your target repository (e.g., GitHub Pages) to a local folder.
 2. In the plugin settings:
-   - Set "Publishing directory" to the local clone's absolute path or a directory within it.
+   - Set "Publishing directory" to the absolute local path of the repository or a directory within it. (If Quartz is used, this is the `content` directory.)
    - Optionally, change the "Publishing branch" (e.g., `main`).
    - Configure "Publishing criterion" (see below).
    - Optionally, uncheck "Show preview before publishing" to skip the preview modal when publishing.
@@ -62,11 +62,11 @@ You can choose to publish (commit and push) or just commit (local only).
 ## Other information
 
 - All Git operations are executed locally. No data is sent to external servers except via the Git remote.
-- AI agents used in development: Claude 3.7, GPT-4o, Claude 4.5 Opus, Gemini 3 Flash, Gemini 3 Pro, Claude 4.5 Haiku, GPT-5.2, Claude 4.5 Opus.
+- AI agents used in development: Claude 3.7, GPT-4o, Claude 4.5 Opus, Gemini 3 Flash, Gemini 3 Pro, Claude 4.5 Haiku, GPT-5.2, Claude 4.6 Opus.
 
 ## Related projects
 
 - [Enveloppe](https://github.com/Enveloppe/obsidian-enveloppe)
-   - Publishes via the GitHub API.
-   - Doesn't require Git and a local repository.
+   - Publishes via the GitHub API rather than a local Git repository.
    - Has more features and options, including processing of links and dataviews.
+   - Has less flexible filtering of files.
