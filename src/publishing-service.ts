@@ -1,6 +1,7 @@
 import { App, TFile } from 'obsidian'
 import * as fs from 'fs/promises'
 import * as path from 'path'
+import { Buffer } from "buffer"
 
 export enum FileUpdateStatus {
     New = 'new',

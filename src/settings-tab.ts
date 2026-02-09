@@ -101,7 +101,7 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
         // Criteria editor and a label representing the current criterion
         new Setting(containerEl)
             .setName('Publishing criterion')
-            .setDesc('The criterion for selecting markdown notes to publish.')
+            .setDesc('The criterion for selecting Markdown notes to publish.')
             .addButton((btn) => btn
                 .setButtonText('Edit criterion')
                 .setCta()
@@ -131,7 +131,6 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                     .onChange(async (value) => {
                         this.plugin.settings.publishAttachments = value
                         await this.plugin.saveSettings()
-                        await this.plugin.updateStatusBar()
                     })
             )
 
@@ -139,11 +138,14 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
         const extraPatternsSetting = new Setting(containerEl)
             .setName('Extra file patterns')
             .setDesc('Glob patterns (one per line) for additional vault files to publish, regardless of the publishing criterion. Supports !, #, and ** syntax.')
-        addGlobField(containerEl, extraPatternsSetting, () => this.plugin.settings.extraFilePatterns, async (value) => {
-            this.plugin.settings.extraFilePatterns = value
-            await this.plugin.saveSettings()
-            await this.plugin.updateStatusBar()
-        })
+        addGlobField(containerEl, extraPatternsSetting, () => this.plugin.settings.extraFilePatterns,
+            (value) => {
+                void (async () => {
+                    this.plugin.settings.extraFilePatterns = value
+                    await this.plugin.saveSettings()
+                })()
+            }
+        )
 
 
         // Initial validation

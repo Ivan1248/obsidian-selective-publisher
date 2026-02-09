@@ -65,9 +65,13 @@ export default class SelectivePublisherPlugin extends Plugin {
             await this.publishNotes()
         })
 
-        // Add a status bar item
+        // Add a status bar item (deferred until metadata cache is resolved)
         this.statusBarItem = this.addStatusBarItem()
-        void this.updateStatusBar()
+        this.registerEvent(
+            this.app.metadataCache.on('resolved', () => {
+                void this.updateStatusBar()
+            })
+        )
 
         // This adds a settings tab so the user can configure various aspects of the plugin
         this.addSettingTab(new SelectivePublisherSettingTab(this.app, this))
@@ -241,5 +245,6 @@ export default class SelectivePublisherPlugin extends Plugin {
         await this.saveData(data)
         // Update service if repo path changed
         this.publishingService = new PublishingService(this.app, this.settings.repo)
+        void this.updateStatusBar()
     }
 }
