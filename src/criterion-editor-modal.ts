@@ -1,5 +1,5 @@
-import { App, Modal, Setting } from 'obsidian'
-import { CriterionType, MatchMode, Criterion, PatternCriterion, FrontmatterCriterion, ContentCriterion, TitleCriterion, PathCriterion, AndCriterion, OrCriterion, NotCriterion, TagCriterion, isValidGlobPattern } from './criterion'
+import { App, Modal, Setting, ButtonComponent } from 'obsidian'
+import { CriterionType, TextMatchMode, TagMatchMode, Criterion, PatternCriterion, FrontmatterCriterion, ContentCriterion, TitleCriterion, PathCriterion, AndCriterion, OrCriterion, NotCriterion, TagCriterion, isValidGlobPattern } from './criterion'
 
 // Utility: validate regex pattern
 function isValidRegex(pattern: string): boolean {
@@ -65,26 +65,30 @@ export class CriterionEditorModal extends Modal {
     }
 
     onOpen() {
-        const { contentEl } = this
+        const { contentEl, modalEl } = this
 
         contentEl.empty()
+        modalEl.addClass('sp-modal-fixed-footer')
         contentEl.createEl('h2', { text: 'Edit publishing criterion' })
 
         const outerCriterionContainer = contentEl.createDiv({ cls: 'sp-outer-criterion-container' })
         this.renderCriterion(outerCriterionContainer, this.rootCriterion, 0, null, -1)
 
-        new Setting(contentEl)
-            .addButton((btn) =>
-                btn.setButtonText('Save').setCta()
-                    .onClick(() => {
-                        this.onSave(this.rootCriterion)
-                        this.close()
-                    })
-            )
-            .addButton((btn) => btn
-                .setButtonText('Cancel')
-                .onClick(() => this.close())
-            )
+        const btnContainer = modalEl.createDiv('modal-button-container')
+
+        new ButtonComponent(btnContainer)
+            .setButtonText('Save')
+            .setCta()
+            .onClick(() => {
+                this.onSave(this.rootCriterion)
+                this.close()
+            })
+
+        new ButtonComponent(btnContainer)
+            .setButtonText('Cancel')
+            .onClick(() => {
+                this.close()
+            })
     }
 
     renderCriterion(container: HTMLElement, criterion: Criterion, depth: number, parent: AndCriterion | OrCriterion | NotCriterion | null, index: number, onDelete?: () => void) {
@@ -136,41 +140,49 @@ export class CriterionEditorModal extends Modal {
 
         } else if (criterion instanceof TagCriterion) {
             new Setting(criterionContainer).setName('Tag')
+                .addDropdown((dropdown) => {
+                    for (const mode of Object.values(TagMatchMode))
+                        dropdown.addOption(mode, mode)
+                    dropdown.setValue(criterion.matchMode)
+                        .onChange((v) => {
+                            criterion.matchMode = v as TagMatchMode
+                            this.renderCriterion(container, criterion, depth, parent, index, onDelete)
+                        })
+                })
                 .addText((text) => text.setValue(criterion.tag).onChange((v) => criterion.tag = v))
 
         } else if (criterion instanceof PatternCriterion) {
-            const patternSetting = new Setting(criterionContainer).setName((CriterionType[criterion.type] ?? 'Pattern') + ' pattern')
+            const patternSetting = new Setting(criterionContainer).setName((CriterionType[criterion.type] ?? ''))
+            patternSetting.addDropdown((dropdown) => {
+                for (const mode of Object.values(TextMatchMode))
+                    dropdown.addOption(mode, mode)
+                dropdown.setValue(criterion.matchMode)
+                    .onChange((v) => {
+                        criterion.matchMode = v as TextMatchMode
+                        this.renderCriterion(container, criterion, depth, parent, index, onDelete)
+                    })
+            })
             switch (criterion.matchMode) {
-                case MatchMode.Regex:
+                case TextMatchMode.Regex:
                     addRegexField(criterionContainer, patternSetting, () => criterion.pattern, (v) => criterion.pattern = v)
                     break
-                case MatchMode.Glob:
+                case TextMatchMode.Glob:
                     addGlobField(criterionContainer, patternSetting, () => criterion.pattern, (v) => criterion.pattern = v)
                     break
-                case MatchMode.Contains:
+                case TextMatchMode.Contains:
                 default:
                     patternSetting.addText((text) => text.setValue(criterion.pattern).onChange((v) => criterion.pattern = v))
                     break
             }
-            new Setting(criterionContainer).setName('Match mode')
-                .addDropdown((dropdown) => {
-                    for (const mode of Object.values(MatchMode))
-                        dropdown.addOption(mode, mode.charAt(0).toUpperCase() + mode.slice(1))
-                    dropdown.setValue(criterion.matchMode)
-                        .onChange((v) => {
-                            criterion.matchMode = v as MatchMode
-                            this.renderCriterion(container, criterion, depth, parent, index, onDelete)
-                        })
-                })
 
-        /*} else if (criterion instanceof FolderCriterion) {
-            new Setting(criterionContainer).setName('Include folders')
-                .addTextArea((text) => text.setValue(criterion.includeFolders.join(', '))
-                    .onChange((v) => criterion.includeFolders = v.split(',').map(s => s.trim())))
-            new Setting(criterionContainer).setName('Exclude folders').setDesc('Comma-separated')
-                .addTextArea((text) => text.setValue(criterion.excludeFolders.join(', '))
-                    .onChange((v) => criterion.excludeFolders = v.split(',').map(s => s.trim())))
-        */
+            /*} else if (criterion instanceof FolderCriterion) {
+                new Setting(criterionContainer).setName('Include folders')
+                    .addTextArea((text) => text.setValue(criterion.includeFolders.join(', '))
+                        .onChange((v) => criterion.includeFolders = v.split(',').map(s => s.trim())))
+                new Setting(criterionContainer).setName('Exclude folders').setDesc('Comma-separated')
+                    .addTextArea((text) => text.setValue(criterion.excludeFolders.join(', '))
+                        .onChange((v) => criterion.excludeFolders = v.split(',').map(s => s.trim())))
+            */
         } else if (criterion instanceof ContentCriterion) {
             const setting = new Setting(criterionContainer).setName('Content regex')
             addRegexField(criterionContainer, setting, () => criterion.regex, (v) => criterion.regex = v)
@@ -193,14 +205,15 @@ export class CriterionEditorModal extends Modal {
         } else if (criterion instanceof NotCriterion) {
             this.renderCriterion(makeSubcriterionContainer(depth), criterion.criterion, depth + 1, criterion, 0)
         }
+        // new Setting(criterionContainer)
     }
 
     createDefaultCriterionByType(type: CriterionType): Criterion {
         switch (type) {
             case CriterionType.Tag: return new TagCriterion('public')
             case CriterionType.Frontmatter: return new FrontmatterCriterion('public', 'true')
-            case CriterionType.Title: return new TitleCriterion('^[^_].*', MatchMode.Regex)
-            case CriterionType.Path: return new PathCriterion('^**/.*\n_*', MatchMode.Glob)
+            case CriterionType.Title: return new TitleCriterion('^[^_].*', TextMatchMode.Regex)
+            case CriterionType.Path: return new PathCriterion('^**/.*\n_*', TextMatchMode.Glob)
             //case CriterionType.Folder: return new FolderCriterion(['public'], [])
             case CriterionType.Content: return new ContentCriterion('^(?!.*#todo)(?!.*#private).*')
             case CriterionType.And: return new AndCriterion([this.createDefaultCriterionByType(CriterionType.Tag)])

@@ -28,22 +28,27 @@
     gap: var(--size-4-2);
 }
 
+.sp-criterion-container:last-child {
+    margin-bottom: 1em;
+}
+
 /* Settings */
 
 
-/* Publishing preview modal layout: fixed buttons at bottom */
 
-.sp-publish-preview-modal {
+/* Shared modal layout: fixed buttons at bottom */
+
+.sp-modal-fixed-footer {
     display: flex;
     flex-direction: column;
 }
 
-.sp-publish-preview-modal .modal-content {
+.sp-modal-fixed-footer .modal-content {
     flex: 1 1 auto;
     overflow-y: auto;
 }
 
-.sp-publish-preview-modal .modal-button-container {
+.sp-modal-fixed-footer .modal-button-container {
     flex-shrink: 0;
 }
 

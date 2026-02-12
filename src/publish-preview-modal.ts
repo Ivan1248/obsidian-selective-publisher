@@ -11,7 +11,7 @@ export class PublishPreviewModal extends Modal {
     onOpen() {
         const { contentEl, modalEl } = this
         this.setTitle('Publishing preview')
-        modalEl.addClass('sp-publish-preview-modal')
+        modalEl.addClass('sp-modal-fixed-footer')
         contentEl.empty()
 
         const sortedFiles = [...this.fileStatuses].sort((a, b) => a.path.localeCompare(b.path))

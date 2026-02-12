@@ -1,7 +1,7 @@
 import { Notice, Plugin, TFile } from 'obsidian'
 import { PublishPreviewModal, PublishAction } from './publish-preview-modal'
 import { FailureModal } from './failure-modal'
-import { Criterion, MatchMode, PathCriterion, OrCriterion, NotCriterion, TagCriterion, TitleCriterion, matchesGlobPatterns } from './criterion'
+import { Criterion, TextMatchMode, TagMatchMode, PathCriterion, OrCriterion, NotCriterion, TagCriterion, TitleCriterion, matchesGlobPatterns } from './criterion'
 import { SelectivePublisherSettingTab } from './settings-tab'
 import { GitHelper } from './git-service'
 import { PublishingService } from './publishing-service'
@@ -26,10 +26,10 @@ const DEFAULT_SETTINGS: SelectivePublisherSettings = {
     repo: '/path/to/publish/repo',
     repoBranch: 'main',
     criterion: new NotCriterion(new OrCriterion([
-        new PathCriterion('**/_*\n_*', MatchMode.Glob),
-        new TagCriterion('todo'),
-        new TitleCriterion('Untitled*', MatchMode.Glob),
-        new TitleCriterion('^\\d+-\\d+-\\d+$', MatchMode.Regex),
+        new PathCriterion('**/_*\n_*', TextMatchMode.Glob),
+        new TagCriterion('todo', TagMatchMode.StartsWith),
+        new TitleCriterion('Untitled*', TextMatchMode.Glob),
+        new TitleCriterion('^\\d+-\\d+-\\d+$', TextMatchMode.Regex),
     ])),
     commitMessage: 'Update published notes',
     showPreviewBeforePublishing: true,

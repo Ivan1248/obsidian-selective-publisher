@@ -15,10 +15,16 @@ export enum CriterionType {
     Not = 'Not',
 }
 
-export enum MatchMode {
+export enum TextMatchMode {
     Contains = 'contains',
-    Regex = 'regex',
-    Glob = 'glob',
+    Regex = 'matches regex',
+    Glob = 'matches glob',
+}
+
+export enum TagMatchMode {
+    Equals = 'equals',
+    StartsWith = 'starts with',
+    Includes = 'includes',
 }
 
 export interface SerializedCriterion {
@@ -232,7 +238,7 @@ export class ContentCriterion extends Criterion {
 // Superclass for pattern-based criteria with configurable match mode
 export abstract class PatternCriterion extends Criterion {
     abstract type: CriterionType
-    constructor(public pattern: string, public matchMode: MatchMode) {
+    constructor(public pattern: string, public matchMode: TextMatchMode) {
         super()
     }
 
@@ -242,11 +248,11 @@ export abstract class PatternCriterion extends Criterion {
     evaluate(file: TFile, _content: string, _metadata: CachedMetadata): boolean {
         const value = this.getTargetValue(file)
         switch (this.matchMode) {
-            case MatchMode.Regex:
+            case TextMatchMode.Regex:
                 return safeRegexTest(this.pattern, value)
-            case MatchMode.Glob:
+            case TextMatchMode.Glob:
                 return matchesGlobPatterns(this.pattern, value)
-            case MatchMode.Contains:
+            case TextMatchMode.Contains:
             default:
                 return value.toLowerCase().includes(this.pattern.toLowerCase())
         }
@@ -254,9 +260,7 @@ export abstract class PatternCriterion extends Criterion {
 
     getSummary(): string {
         const descr = CriterionType[this.type] ?? 'Pattern'
-        const modeLabel = this.matchMode === MatchMode.Regex ? 'matches regex'
-            : this.matchMode === MatchMode.Glob ? 'matches glob'
-                : 'contains'
+        const modeLabel = this.matchMode
         return `${descr} ${modeLabel}: ${this.pattern}`
     }
 
@@ -269,7 +273,7 @@ export abstract class PatternCriterion extends Criterion {
 export class TitleCriterion extends PatternCriterion {
     type = CriterionType.Title
 
-    constructor(public pattern: string = '', public matchMode: MatchMode) {
+    constructor(public pattern: string = '', public matchMode: TextMatchMode) {
         super(pattern, matchMode)
     }
 
@@ -278,7 +282,7 @@ export class TitleCriterion extends PatternCriterion {
     }
 
     static deserialize(data: SerializedCriterion): TitleCriterion {
-        return new TitleCriterion(data.pattern as string, data.matchMode as MatchMode)
+        return new TitleCriterion(data.pattern as string, data.matchMode as TextMatchMode)
     }
 }
 
@@ -286,7 +290,7 @@ export class TitleCriterion extends PatternCriterion {
 export class PathCriterion extends PatternCriterion {
     type = CriterionType.Path
 
-    constructor(public pattern: string, public matchMode: MatchMode) {
+    constructor(public pattern: string, public matchMode: TextMatchMode) {
         super(pattern, matchMode)
     }
 
@@ -296,7 +300,7 @@ export class PathCriterion extends PatternCriterion {
     }
 
     static deserialize(data: SerializedCriterion): PathCriterion {
-        return new PathCriterion(data.pattern as string, data.matchMode as MatchMode)
+        return new PathCriterion(data.pattern as string, data.matchMode as TextMatchMode)
     }
 }
 
@@ -427,23 +431,31 @@ export function getAllTagsFromFile(file: TFile, content: string, metadata: Cache
 export class TagCriterion extends Criterion {
     type = CriterionType.Tag
     tag: string
+    matchMode: TagMatchMode
 
-    constructor(tag: string) {
+    constructor(tag: string, matchMode: TagMatchMode = TagMatchMode.StartsWith) {
         super()
         this.tag = tag.toLowerCase()
+        this.matchMode = matchMode
     }
 
     evaluate(file: TFile, content: string, metadata: CachedMetadata): boolean {
         const tags = getAllTagsFromFile(file, content, metadata)
         return tags.some(tag => {
             const normalizedTag = tag.toLowerCase()
-            // match exact tag or hierarchical subtags (e.g., "foo" matches "foo", "foo/bar", "foo/bar/baz")
-            return normalizedTag === this.tag || normalizedTag.startsWith(this.tag + '/')
+            switch (this.matchMode) {
+                case TagMatchMode.Equals:
+                    return normalizedTag === this.tag
+                case TagMatchMode.StartsWith:
+                    return normalizedTag === this.tag || normalizedTag.startsWith(this.tag + '/')
+                case TagMatchMode.Includes:
+                    return normalizedTag.split('/').includes(this.tag)
+            }
         })
     }
 
     getSummary(): string {
-        return `Tag: ${this.tag}`
+        return `Tag: ${this.matchMode}: ${this.tag}`
     }
 
     serialize(): SerializedCriterion {
