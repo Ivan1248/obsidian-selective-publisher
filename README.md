@@ -13,7 +13,8 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 
 - Obsidian v0.15.0+
 - Git installed and configured locally.
-- A local clone of target remote repository. The repository can contain static site generation workflows such as one based on [Quartz v4](https://github.com/jackyzha0/quartz).
+- A local clone of target remote repository. 
+- For publishing as a website, the repository can contain a static site generator such as [Quartz](https://github.com/jackyzha0/quartz), which is able to process Obsidian Markdown files.
 
 ## Installation
 
@@ -61,12 +62,24 @@ You can choose to publish (commit and push) or just commit (local only).
 
 ## Other information
 
-- All Git operations are executed locally. No data is sent to external servers except via the Git remote.
-- AI agents used in development: Claude 3.7, GPT-4o, Claude 4.5 Opus, Gemini 3 Flash, Gemini 3 Pro, Claude 4.5 Haiku, GPT-5.2, Claude 4.6 Opus.
+- [Disclosures](https://docs.obsidian.md/Developer+policies#Disclosures) per Obsidian developer policies:
+    - Network use. The network is used for synchronizing with the remote Git repository when publishing. No data is sent to any other servers.
+    - Accessing files outside of Obsidian vaults. The plugin manages the content directory in the local repository and the `git` command.
+- AI agents used in development: Claude 3.7 Sonnet – Opus 4.6, GPT-4o – GPT-5.2, Gemini 3 Pro and Flash
 
 ## Related projects
 
+Obsidian plugins:
 - [Enveloppe](https://github.com/Enveloppe/obsidian-enveloppe)
    - Publishes via the GitHub API rather than a local Git repository.
    - Has more features and options, including processing of links and dataviews.
    - Has less flexible filtering of files.
+- [Quartz Syncer](https://github.com/saberzero1/quartz-syncer)
+   - Publishes through authentication to different Git providers.
+   - Has more features, including forntmatter processing and integration with other plugings such as Dataview.
+   - Has less flexible filtering of files.
+- [Digital Garden](https://github.com/oleeskild/obsidian-digital-garden)
+
+Static site generators and other projects:
+- [Quartz](https://github.com/jackyzha0/quartz)
+- [Obsidian Publish](https://obsidian.md/publish)
