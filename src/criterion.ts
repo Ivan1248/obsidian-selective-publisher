@@ -126,7 +126,7 @@ export function matchesGlobPatterns(multiLinePattern: string, input: string): bo
 
 export abstract class Criterion {
     static deserialize(data: SerializedCriterion): Criterion {
-        const criterionClass = registry.get(data.type as CriterionType)
+        const criterionClass = registry.get(data.type)
         if (!criterionClass) {
             throw new Error(`Unknown criterion type: ${data.type}`)
         }
