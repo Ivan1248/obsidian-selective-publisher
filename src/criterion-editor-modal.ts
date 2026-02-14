@@ -104,7 +104,7 @@ export class CriterionEditorModal extends Modal {
                     dropdown.addOption(type, type)
 
                 dropdown.setValue(criterion.getType())
-                    .onChange((value) => {
+                    .onChange((value: string) => {
                         const newCriterion = this.createDefaultCriterionByType(value as CriterionType)
 
                         if (depth === 0) {

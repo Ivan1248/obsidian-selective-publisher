@@ -4,7 +4,7 @@ import picomatch from 'picomatch'
 // Serialization
 
 // Type derived from class names (e.g., 'Tag' from TagCriterion)
-export const CRITERION_TYPE_NAMES = ['Tag', 'Frontmatter', 'Title', 'Path', 'Content', 'And', 'Or', 'Not']
+export const CRITERION_TYPE_NAMES = ['Tag', 'Frontmatter', 'Title', 'Path', 'Content', 'And', 'Or', 'Not'] as const
 export type CriterionType = typeof CRITERION_TYPE_NAMES[number]
 
 export enum TextMatchMode {
@@ -27,7 +27,7 @@ export enum FrontmatterMatchMode {
 }
 
 export interface SerializedCriterion {
-    type: string
+    type: CriterionType
     [key: string]: unknown
 }
 
@@ -126,7 +126,7 @@ export function matchesGlobPatterns(multiLinePattern: string, input: string): bo
 
 export abstract class Criterion {
     static deserialize(data: SerializedCriterion): Criterion {
-        const criterionClass = registry.get(data.type)
+        const criterionClass = registry.get(data.type as CriterionType)
         if (!criterionClass) {
             throw new Error(`Unknown criterion type: ${data.type}`)
         }
