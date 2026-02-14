@@ -18,19 +18,18 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
         containerEl.empty()
         new Setting(containerEl).setName('Publishing repository').setHeading()
 
-        // Publishing repository setting
-        let repoText: TextComponent
+        let repoContentPathText: TextComponent
         new Setting(containerEl)
             .setName('Publishing directory')
             .setDesc('Path to the content directory in a local Git repository for publishing.')
             .addText((text) => {
-                repoText = text
+                repoContentPathText = text
                 text.setPlaceholder('Enter repository path')
                     .setValue(this.plugin.settings.repo)
                     .onChange(async (value) => {
                         this.plugin.settings.repo = value
                         await this.plugin.saveSettings()
-                        await this.validateAndRefreshBranches(branchDropdown)
+                        await this.validateAndRefreshRepoBranches(repoBranchDropdown)
                     })
             })
             .addExtraButton((btn) => btn
@@ -46,9 +45,9 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                         if (!result.canceled && result.filePaths.length > 0) {
                             const selectedPath = result.filePaths[0]!
                             this.plugin.settings.repo = selectedPath
-                            repoText.setValue(selectedPath)
+                            repoContentPathText.setValue(selectedPath)
                             await this.plugin.saveSettings()
-                            await this.validateAndRefreshBranches(branchDropdown)
+                            await this.validateAndRefreshRepoBranches(repoBranchDropdown)
                         }
                     } catch (error) {
                         console.error('Directory picker error:', error)
@@ -57,21 +56,19 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                 })
             )
 
-        // Branch dropdown setting
-        let branchDropdown: DropdownComponent
+        let repoBranchDropdown: DropdownComponent
         new Setting(containerEl)
             .setName('Branch')
             .setDesc('Branch to push the published notes to.')
             .addDropdown((dropdown) => {
-                branchDropdown = dropdown
-                void this.refreshBranchDropdown(dropdown)
+                repoBranchDropdown = dropdown
+                void this.refreshRepoBranchDropdown(dropdown)
                 dropdown.onChange(async (value) => {
                     this.plugin.settings.repoBranch = value
                     await this.plugin.saveSettings()
                 })
             })
 
-        // Commit message setting
         new Setting(containerEl)
             .setName('Commit message')
             .setDesc('Default commit message for publishing changes.')
@@ -84,9 +81,8 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                     })
             )
 
-        new Setting(containerEl).setName('Publishing').setHeading()
+        new Setting(containerEl).setName('Files to publish').setHeading()
 
-        // Show preview before publishing
         new Setting(containerEl)
             .setName('Show preview before publishing')
             .setDesc('Show the publishing preview modal before publishing.')
@@ -98,7 +94,6 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                     })
             )
 
-        // Criteria editor and a label representing the current criterion
         new Setting(containerEl)
             .setName('Publishing criterion')
             .setDesc('The criterion for selecting Markdown notes to publish.')
@@ -116,13 +111,12 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                 .setButtonText('Preview publishable files')
                 .onClick(this.plugin.previewPublishableFiles.bind(this.plugin))
             )
-
+        // Representation of the current criterion
         containerEl.createEl('pre', {
             text: this.plugin.settings.criterion.getSummary(),
             cls: 'sp-criterion-summary',
         })
 
-        // Publish attachments
         new Setting(containerEl)
             .setName('Publish attachments')
             .setDesc('Publish attachments referenced in publishable notes.')
@@ -134,7 +128,6 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                     })
             )
 
-        // Extra file patterns
         const extraPatternsSetting = new Setting(containerEl)
             .setName('Extra file patterns')
             .setDesc('Glob patterns (one per line) for additional vault files to publish, regardless of the publishing criterion. Supports !, #, and ** syntax.')
@@ -147,22 +140,21 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
             }
         )
 
-
         // Initial validation
-        void this.validateAndRefreshBranches(branchDropdown!)
+        void this.validateAndRefreshRepoBranches(repoBranchDropdown!)
     }
 
-    async validateAndRefreshBranches(dropdown?: DropdownComponent) {
+    async validateAndRefreshRepoBranches(dropdown?: DropdownComponent) {
         const result = await GitHelper.validateRepo(this.plugin.settings.repo)
         if (!result.isValid) {
             new Notice(result.error || 'Invalid repository path')
         }
         if (dropdown) {
-            await this.refreshBranchDropdown(dropdown)
+            await this.refreshRepoBranchDropdown(dropdown)
         }
     }
 
-    async refreshBranchDropdown(dropdown: DropdownComponent) {
+    async refreshRepoBranchDropdown(dropdown: DropdownComponent) {
         const branches = await GitHelper.getBranches(this.plugin.settings.repo)
             .catch(() => [] as string[])
 
