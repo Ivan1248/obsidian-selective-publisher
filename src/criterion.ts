@@ -3,17 +3,9 @@ import picomatch from 'picomatch'
 
 // Serialization
 
-export enum CriterionType {
-    Tag = 'Tag',
-    Frontmatter = 'Frontmatter',
-    //Folder = 'Folder',
-    Title = 'Title',
-    Path = 'Path',
-    Content = 'Content',
-    And = 'And',
-    Or = 'Or',
-    Not = 'Not',
-}
+// Type derived from class names (e.g., 'Tag' from TagCriterion)
+export const CRITERION_TYPE_NAMES = ['Tag', 'Frontmatter', 'Title', 'Path', 'Content', 'And', 'Or', 'Not']
+export type CriterionType = typeof CRITERION_TYPE_NAMES[number]
 
 export enum TextMatchMode {
     Contains = 'contains',
@@ -27,8 +19,15 @@ export enum TagMatchMode {
     Includes = 'includes',
 }
 
+export enum FrontmatterMatchMode {
+    Exists = 'exists',
+    Equals = 'equals',
+    Contains = 'contains',
+    Regex = 'matches regex',
+}
+
 export interface SerializedCriterion {
-    type: CriterionType
+    type: string
     [key: string]: unknown
 }
 
@@ -145,74 +144,58 @@ export abstract class Criterion {
 
 @RegisterCriterion
 export class FrontmatterCriterion extends Criterion {
-    type = CriterionType.Frontmatter
-
-    constructor(public key: string, public value: string) {
+    constructor(
+        public key: string,
+        public value: string,
+        public matchMode: FrontmatterMatchMode = FrontmatterMatchMode.Equals
+    ) {
         super()
     }
 
     evaluate(file: TFile, content: string, metadata: CachedMetadata): boolean {
         const frontmatterValue = metadata?.frontmatter?.[this.key] as unknown
+
+        if (this.matchMode === FrontmatterMatchMode.Exists) {
+            return frontmatterValue !== undefined
+        }
+
         if (frontmatterValue === undefined) return false
 
-        const regex = new RegExp(`^${this.value}$`, 'i')
-        return regex.test(stringifyValue(frontmatterValue))
+        const stringVal = stringifyValue(frontmatterValue)
+        switch (this.matchMode) {
+            case FrontmatterMatchMode.Equals:
+                return stringVal.toLowerCase() === this.value.toLowerCase()
+            case FrontmatterMatchMode.Contains:
+                return stringVal.toLowerCase().includes(this.value.toLowerCase())
+            case FrontmatterMatchMode.Regex:
+                return safeRegexTest(this.value, stringVal)
+            default:
+                return false
+        }
     }
 
     getSummary(): string {
-        return `Frontmatter: ${this.key} = ${this.value}`
+        if (this.matchMode === FrontmatterMatchMode.Exists) {
+            return `Frontmatter: ${this.key} exists`
+        }
+        return `Frontmatter: ${this.key} ${this.matchMode} ${this.value}`
     }
 
     serialize(): SerializedCriterion {
-        return { type: this.type, key: this.key, value: this.value }
+        return { type: this.getType(), key: this.key, value: this.value, matchMode: this.matchMode }
     }
 
     static deserialize(data: SerializedCriterion): FrontmatterCriterion {
-        return new FrontmatterCriterion(data.key as string, data.value as string)
+        return new FrontmatterCriterion(
+            data.key as string,
+            data.value as string,
+            data.matchMode as FrontmatterMatchMode
+        )
     }
 }
-
-/*
-@RegisterCriterion
-export class FolderCriterion extends Criterion {
-    type = CriterionType.Folder
-
-    constructor(public includeFolders: string[], public excludeFolders: string[]) {
-        super()
-    }
-
-    evaluate(file: TFile, _content: string, _metadata: CachedMetadata): boolean {
-        if (this.excludeFolders.some(folder => file.path.startsWith(folder + '/') || file.path === folder)) {
-            return false
-        }
-        if (this.includeFolders.length > 0 && !this.includeFolders.some(folder => file.path.startsWith(folder + '/') || file.path === folder)) {
-            return false
-        }
-        return true
-    }
-
-    getSummary(): string {
-        return `Folder: Include [${this.includeFolders.join(', ') || 'all'}], Exclude [${this.excludeFolders.join(', ') || 'none'}]`
-    }
-
-    serialize(): SerializedCriterion {
-        return {
-            type: this.type,
-            includeFolders: this.includeFolders,
-            excludeFolders: this.excludeFolders,
-        }
-    }
-
-    static deserialize(data: SerializedCriterion): FolderCriterion {
-        return new FolderCriterion(data.includeFolders as string[], data.excludeFolders as string[])
-    }
-}
-*/
 
 @RegisterCriterion
 export class ContentCriterion extends Criterion {
-    type = CriterionType.Content
-
     constructor(public regex: string) {
         super()
     }
@@ -226,7 +209,7 @@ export class ContentCriterion extends Criterion {
     }
 
     serialize(): SerializedCriterion {
-        return { type: this.type, regex: this.regex }
+        return { type: this.getType(), regex: this.regex }
     }
 
     static deserialize(data: SerializedCriterion): ContentCriterion {
@@ -237,7 +220,6 @@ export class ContentCriterion extends Criterion {
 
 // Superclass for pattern-based criteria with configurable match mode
 export abstract class PatternCriterion extends Criterion {
-    abstract type: CriterionType
     constructor(public pattern: string, public matchMode: TextMatchMode) {
         super()
     }
@@ -259,20 +241,16 @@ export abstract class PatternCriterion extends Criterion {
     }
 
     getSummary(): string {
-        const descr = CriterionType[this.type] ?? 'Pattern'
-        const modeLabel = this.matchMode
-        return `${descr} ${modeLabel}: ${this.pattern}`
+        return `${this.getType()} ${this.matchMode}: ${this.pattern}`
     }
 
     serialize(): SerializedCriterion {
-        return { type: this.type, pattern: this.pattern, matchMode: this.matchMode }
+        return { type: this.getType(), pattern: this.pattern, matchMode: this.matchMode }
     }
 }
 
 @RegisterCriterion
 export class TitleCriterion extends PatternCriterion {
-    type = CriterionType.Title
-
     constructor(public pattern: string = '', public matchMode: TextMatchMode) {
         super(pattern, matchMode)
     }
@@ -288,8 +266,6 @@ export class TitleCriterion extends PatternCriterion {
 
 @RegisterCriterion
 export class PathCriterion extends PatternCriterion {
-    type = CriterionType.Path
-
     constructor(public pattern: string, public matchMode: TextMatchMode) {
         super(pattern, matchMode)
     }
@@ -310,8 +286,6 @@ function indentText(text: string, spaces: number): string {
 
 @RegisterCriterion
 export class AndCriterion extends Criterion {
-    type = CriterionType.And
-
     constructor(public criteria: Criterion[]) {
         super()
     }
@@ -331,7 +305,7 @@ export class AndCriterion extends Criterion {
     }
 
     serialize(): SerializedCriterion {
-        return { type: this.type, criteria: this.criteria.map(c => c.serialize()) }
+        return { type: this.getType(), criteria: this.criteria.map(c => c.serialize()) }
     }
 
     static deserialize(data: SerializedCriterion): AndCriterion {
@@ -341,8 +315,6 @@ export class AndCriterion extends Criterion {
 
 @RegisterCriterion
 export class OrCriterion extends Criterion {
-    type = CriterionType.Or
-
     constructor(public criteria: Criterion[]) {
         super()
     }
@@ -362,7 +334,7 @@ export class OrCriterion extends Criterion {
     }
 
     serialize(): SerializedCriterion {
-        return { type: this.type, criteria: this.criteria.map(c => c.serialize()) }
+        return { type: this.getType(), criteria: this.criteria.map(c => c.serialize()) }
     }
 
     static deserialize(data: SerializedCriterion): OrCriterion {
@@ -372,8 +344,6 @@ export class OrCriterion extends Criterion {
 
 @RegisterCriterion
 export class NotCriterion extends Criterion {
-    type = CriterionType.Not
-
     constructor(public criterion: Criterion) {
         super()
     }
@@ -387,7 +357,7 @@ export class NotCriterion extends Criterion {
     }
 
     serialize(): SerializedCriterion {
-        return { type: this.type, criterion: this.criterion.serialize() }
+        return { type: this.getType(), criterion: this.criterion.serialize() }
     }
 
     static deserialize(data: SerializedCriterion): NotCriterion {
@@ -429,14 +399,8 @@ export function getAllTagsFromFile(file: TFile, content: string, metadata: Cache
 
 @RegisterCriterion
 export class TagCriterion extends Criterion {
-    type = CriterionType.Tag
-    tag: string
-    matchMode: TagMatchMode
-
-    constructor(tag: string, matchMode: TagMatchMode = TagMatchMode.StartsWith) {
+    constructor(public tag: string, public matchMode: TagMatchMode = TagMatchMode.StartsWith) {
         super()
-        this.tag = tag.toLowerCase()
-        this.matchMode = matchMode
     }
 
     evaluate(file: TFile, content: string, metadata: CachedMetadata): boolean {
@@ -459,7 +423,7 @@ export class TagCriterion extends Criterion {
     }
 
     serialize(): SerializedCriterion {
-        return { type: this.type, tag: this.tag }
+        return { type: this.getType(), tag: this.tag }
     }
 
     static deserialize(data: SerializedCriterion): TagCriterion {
