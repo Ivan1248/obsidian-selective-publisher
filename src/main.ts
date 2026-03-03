@@ -39,7 +39,6 @@ const DEFAULT_SETTINGS: SelectivePublisherSettings = {
 
 export default class SelectivePublisherPlugin extends Plugin {
     settings!: SelectivePublisherSettings
-    statusBarItem!: HTMLElement
     publishingService!: PublishingService
 
     async onload() {
@@ -65,22 +64,7 @@ export default class SelectivePublisherPlugin extends Plugin {
             await this.publishNotes()
         })
 
-        // Add a status bar item (deferred until metadata cache is resolved)
-        this.statusBarItem = this.addStatusBarItem()
-        this.registerEvent(
-            this.app.metadataCache.on('resolved', () => {
-                void this.updateStatusBar()
-            })
-        )
-
-        // This adds a settings tab so the user can configure various aspects of the plugin
         this.addSettingTab(new SelectivePublisherSettingTab(this.app, this))
-    }
-
-    async updateStatusBar() {
-        const publishableFiles = await this.getPublishableFiles()
-        const noteCount = publishableFiles.filter(f => f.extension === 'md').length
-        this.statusBarItem.setText(`${noteCount} publishable notes`)
     }
 
     async getPublishableFiles(): Promise<TFile[]> {
@@ -138,7 +122,7 @@ export default class SelectivePublisherPlugin extends Plugin {
                 return
             }
 
-            const modal = new PublishPreviewModal(this.app, fileStatuses, hasUncommittedChanges, (action: PublishAction) => this.publishNotes(action === 'commit', true))
+            const modal = new PublishPreviewModal(this.app, fileStatuses, hasUncommittedChanges, (action: PublishAction) => this.publishNotes(action === 'commit', true, publishableFiles))
             modal.open()
         } catch (error) {
             console.error('Preview failed:', error)
@@ -146,7 +130,7 @@ export default class SelectivePublisherPlugin extends Plugin {
         }
     }
 
-    async publishNotes(onlyCommit = false, skipPreview = false) {
+    async publishNotes(onlyCommit = false, skipPreview = false, cachedPublishableFiles?: TFile[]) {
         try {
             if (!skipPreview && this.settings.showPreviewBeforePublishing) {
                 await this.previewPublishableFiles()
@@ -171,7 +155,7 @@ export default class SelectivePublisherPlugin extends Plugin {
                 }
             }
 
-            const publishableFiles = await this.getPublishableFiles()
+            const publishableFiles = cachedPublishableFiles ?? await this.getPublishableFiles()
             await this.publishingService.updateFilesInRepo(publishableFiles)
 
             // Commit and optionally push changes
@@ -245,6 +229,5 @@ export default class SelectivePublisherPlugin extends Plugin {
         await this.saveData(data)
         // Update service if repo path changed
         this.publishingService = new PublishingService(this.app, this.settings.repo)
-        void this.updateStatusBar()
     }
 }
