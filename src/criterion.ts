@@ -423,10 +423,10 @@ export class TagCriterion extends Criterion {
     }
 
     serialize(): SerializedCriterion {
-        return { type: this.getType(), tag: this.tag }
+        return { type: this.getType(), tag: this.tag, matchMode: this.matchMode }
     }
 
     static deserialize(data: SerializedCriterion): TagCriterion {
-        return new TagCriterion(data.tag as string)
+        return new TagCriterion(data.tag as string, data.matchMode as TagMatchMode)
     }
 }

@@ -5,7 +5,7 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 ## Features
 ![Screenshot of Plugin](docs/images/screens.webp)
 
-- Filtering of notes and attachemnts based on tags, frontmatter, path, or content, and path-based filtering of other files.
+- Filtering of notes and attachments based on tags, frontmatter, path, or content, and path-based filtering of other files.
 - Committing and pushing to a target Git repository.
 - Review of changed files (added, modified, deleted) before publishing.
 
