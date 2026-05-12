@@ -21,7 +21,7 @@ function addRegexField(container: HTMLElement, setting: Setting, getValue: () =>
                 if (errorEl) { errorEl.remove(); errorEl = null }
 
                 if (!isValidRegex(value)) {
-                    errorEl = container.createEl('div', { text: 'Invalid regex', cls: 'sp-pattern-error' })
+                    errorEl = container.createDiv({ text: 'Invalid regex', cls: 'sp-pattern-error' })
                 }
                 setValue(value)
             })
@@ -46,7 +46,7 @@ export function addGlobField(container: HTMLElement, setting: Setting, getValue:
                     const label = invalidLineNumbers.length === 1
                         ? `Invalid glob pattern on line ${invalidLineNumbers[0]}`
                         : `Invalid glob patterns on lines ${invalidLineNumbers.join(', ')}`
-                    errorEl = container.createEl('div', { text: label, cls: 'sp-pattern-error' })
+                    errorEl = container.createDiv({ text: label, cls: 'sp-pattern-error' })
                 }
                 setValue(value)
             })
@@ -127,7 +127,7 @@ export class CriterionEditorModal extends Modal {
             )
         }
 
-        const makeSubcriterionContainer = (depth: number): HTMLElement => {
+        const makeSubcriterionContainer = (): HTMLElement => {
             return criterionContainer.createDiv({ cls: 'sp-subcriterion-container' })
         }
 
@@ -197,7 +197,7 @@ export class CriterionEditorModal extends Modal {
 
         } else if (criterion instanceof AndCriterion || criterion instanceof OrCriterion) {
             criterion.criteria.forEach((sub, i) => {
-                const subContainer = makeSubcriterionContainer(depth)
+                const subContainer = makeSubcriterionContainer()
                 const subOnDelete = () => {
                     criterion.criteria.splice(i, 1)
                     this.renderCriterion(container, criterion, depth, parent, index, onDelete)
@@ -211,7 +211,7 @@ export class CriterionEditorModal extends Modal {
                 }))
 
         } else if (criterion instanceof NotCriterion) {
-            this.renderCriterion(makeSubcriterionContainer(depth), criterion.criterion, depth + 1, criterion, 0)
+            this.renderCriterion(makeSubcriterionContainer(), criterion.criterion, depth + 1, criterion, 0)
         }
     }
 

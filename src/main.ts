@@ -60,9 +60,7 @@ export default class SelectivePublisherPlugin extends Plugin {
         })
 
         // Add a ribbon icon
-        this.addRibbonIcon('paper-plane', 'Publish notes', async () => {
-            await this.publishNotes()
-        })
+        this.addRibbonIcon('paper-plane', 'Publish notes', () => { void this.publishNotes() })
 
         this.addSettingTab(new SelectivePublisherSettingTab(this.app, this))
     }

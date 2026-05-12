@@ -63,9 +63,9 @@ export class PublishPreviewModal extends Modal {
 
         for (const { path, status } of files) {
             const li = listEl.createEl('li', { cls: `is-${status}` })
-            li.createEl('span', { text: path, cls: 'sp-publish-path' })
+            li.createSpan({ text: path, cls: 'sp-publish-path' })
             if (!hideBadge) {
-                li.createEl('span', { text: status, cls: 'sp-publish-badge' })
+                li.createSpan({ text: status, cls: 'sp-publish-badge' })
             }
         }
     }

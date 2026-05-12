@@ -109,7 +109,7 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
             )
             .addButton((btn) => btn
                 .setButtonText('Preview publishable files')
-                .onClick(this.plugin.previewPublishableFiles.bind(this.plugin))
+                .onClick(() => { void this.plugin.previewPublishableFiles() })
             )
         // Representation of the current criterion
         containerEl.createEl('pre', {

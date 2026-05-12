@@ -2,7 +2,7 @@
   "id": "selective-publisher",
   "name": "Selective Publisher",
   "version": "1.0.0",
-  "minAppVersion": "0.15.0",
+  "minAppVersion": "1.4.0",
   "description": "Selectively publishes notes to a Git repository.",
   "author": "Ivan Grubišić",
   "authorUrl": "https://github.com/Ivan1248",

@@ -10,6 +10,15 @@ interface ExecFileError extends Error {
     stderr?: string
 }
 
+function isExecFileError(error: unknown): error is ExecFileError {
+    return error instanceof Error
+}
+
+function toExecFileError(error: unknown): ExecFileError {
+    if (isExecFileError(error)) return error
+    return new Error(String(error)) as ExecFileError
+}
+
 export interface RepoValidationResult {
     isValid: boolean
     error?: string
@@ -22,7 +31,7 @@ export class GitHelper {
             await execFileAsync('git', ['rev-parse', '--is-inside-work-tree'], { cwd: repoPath })
             return { isValid: true }
         } catch (error) {
-            const execError = error as ExecFileError
+            const execError = toExecFileError(error)
             const errorMessage = execError.message.includes('not a git repository')
                 ? 'Path is not a valid Git repository.'
                 : this.formatGitError(repoPath, execError, 'validate repository')
@@ -52,7 +61,7 @@ export class GitHelper {
             try {
                 await execFileAsync('git', ['commit', '-m', message], { cwd: repoPath })
             } catch (err) {
-                const execError = err as ExecFileError
+                const execError = toExecFileError(err)
                 if (!execError.stdout?.includes('nothing to commit') && !execError.stderr?.includes('nothing to commit')) {
                     throw err
                 }
@@ -75,7 +84,7 @@ export class GitHelper {
             await execFileAsync('git', ['pull', 'origin', branch], { cwd: repoPath })
         } catch (error) {
             // Check if it's a merge conflict
-            const execError = error as ExecFileError
+            const execError = toExecFileError(error)
             if (execError.stderr?.includes('CONFLICT') || execError.message.includes('CONFLICT')) {
                 throw new Error('Merge conflict detected. Please resolve conflicts manually in your repository.')
             }
@@ -99,7 +108,7 @@ export class GitHelper {
 
     private static handleGitError(repoPath: string, error: unknown, action: string): never {
         console.error(`Git error during ${action} in path ${repoPath}:`, error)
-        throw new Error(this.formatGitError(repoPath, error as ExecFileError, action))
+        throw new Error(this.formatGitError(repoPath, toExecFileError(error), action))
     }
 
     static async hasUncommittedChanges(repoPath: string): Promise<boolean> {
