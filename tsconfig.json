@@ -9,7 +9,10 @@
 		"strict": true,
 		"noImplicitReturns": true,
 		"noUncheckedIndexedAccess": true,
-		"isolatedModules": true
+		"isolatedModules": true,
+		"types": [
+			"node"
+		]
 	},
 	"include": [
 		"src/**/*.ts"

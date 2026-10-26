@@ -22,12 +22,12 @@
     "@types/node": "^25.0.3",
     "@types/picomatch": "^4.0.2",
     "esbuild": "^0.27.2",
-    "eslint-plugin-obsidianmd": "^0.1.9",
+    "eslint": "^9.39.5",
+    "eslint-plugin-obsidianmd": "^0.4.2",
     "globals": "^17.0.0",
-    "obsidian": "latest",
+    "obsidian": "^1.14.4",
     "picomatch": "^4.0.3",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.52.0"
-  },
-  "dependencies": {}
+    "typescript": "~6.0",
+    "typescript-eslint": "^8.72.1"
+  }
 }

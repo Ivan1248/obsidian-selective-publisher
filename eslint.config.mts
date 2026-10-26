@@ -1,9 +1,8 @@
-import tseslint from 'typescript-eslint';
 import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
-import { globalIgnores } from "eslint/config";
+import { defineConfig, globalIgnores } from "eslint/config";
 
-export default tseslint.config(
+export default defineConfig(
 	{
 		languageOptions: {
 			globals: {
@@ -12,7 +11,7 @@ export default tseslint.config(
 			parserOptions: {
 				projectService: {
 					allowDefaultProject: [
-						'eslint.config.js',
+						'eslint.config.mts',
 						'manifest.json'
 					]
 				},
@@ -23,6 +22,7 @@ export default tseslint.config(
 	},
 	...obsidianmd.configs.recommended,
 	{
+		files: ['**/*.{ts,mts}'],
 		rules: {
 			"@typescript-eslint/require-await": "error",
 			"@typescript-eslint/no-floating-promises": "error",
@@ -34,7 +34,6 @@ export default tseslint.config(
 		"node_modules",
 		"dist",
 		"esbuild.config.mjs",
-		"eslint.config.js",
 		"version-bump.mjs",
 		"versions.json",
 		"main.js",
