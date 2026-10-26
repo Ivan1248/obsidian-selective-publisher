@@ -25,8 +25,8 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 
 1. Clone your target repository (e.g., GitHub Pages) to a local folder.
 2. In the plugin settings:
-   - Set "Publishing directory" to the absolute local path of the repository or a directory within it. (If Quartz is used, this is the `content` directory.)
-   - Optionally, change the "Branch" (e.g., `main`).
+   - Set "Publishing folder" to the absolute local path of the repository or a folder within it. (If Quartz is used, this is the `content` folder.)
+   - Optionally, select a "Branch".
    - Configure "Publishing criterion" (see below).
    - Optionally, uncheck "Show preview before publishing" to skip the preview modal when publishing.
 
@@ -62,9 +62,12 @@ To test locally, put `main.js` and `manifest.json` into `<your-vault>/.obsidian/
 
 ## Other information
 
-- [Disclosures](https://docs.obsidian.md/Developer+policies#Disclosures) per Obsidian developer policies:
-    - Network use. The network is used for synchronizing with the remote Git repository when publishing. No data is sent to any other servers.
-    - Accessing files outside of Obsidian vaults. The plugin manages the content directory in the local repository and the `git` command.
+- [Disclosures](https://docs.obsidian.md/Community+directory/Developer+policies#Disclosures) per Obsidian developer policies:
+    - Network use. The network is used for synchronizing with the remote Git repository when publishing. No other servers are contacted.
+    - File access outside the vault. The plugin manages the publishing folder.
+    - Running external programs. The plugin runs `git` commands in the publishing repository.
+    - Vault access. The plugin reads notes to evaluate the publishing criterion and copies only matching notes and their attachments.
+
 - AI agents used in development: Claude 3.7 Sonnet – Opus 4.6, GPT-4o – GPT-5.2, Gemini 3 Pro and Flash, Claude Opus 5.5
 
 ## Related projects
