@@ -3,7 +3,7 @@ import { DiffLine, DiffLineKind, FileDiff } from '../publishing/diff-parser'
 const SIGNS: Partial<Record<DiffLineKind, string>> = { added: '+', removed: '−' }
 // Words, whitespace runs, and single punctuation characters
 const TOKEN_REGEX = /[\p{L}\p{N}_]+|\s+|[^\p{L}\p{N}_\s]/gu
-// Skip in-line emphasis for very long line pairs to keep the quadratic LCS cheap
+// Limit on the LCS table size, above which in-line emphasis is skipped to keep the quadratic LCS cheap
 const MAX_LCS_CELLS = 250000
 
 /** Renders a diff as table rows with old/new line numbers, similar to VS Code's inline diff. */

@@ -112,8 +112,8 @@ Where this section is silent, follow the [Google developer documentation style g
 
 ### 5.2 Code documentation
 
-- Use TSDoc comments (`/** ... */`) for exported classes and for functions whose behaviour isn't obvious from the signature. Skip self-documenting members. Do not repeat types that the signature already states.
-- Write the first sentence of a doc comment as a description, not an imperative statement: "Returns the diff between the published copy and the vault version.", not "Return the diff".
+- Describe a declaration, such as a class, function, member, or property, with a TSDoc comment (`/** ... */`). Skip self-documenting declarations, and do not repeat types that the signature states.
+- End a sentence with a full stop, but not a noun phrase.
 - Document non-obvious contracts: units, value ranges, and the meaning of absent values (for example, a line number that is absent for added lines).
 - Prefer a more descriptive identifier over an inline comment. Add a comment only for rationale a name cannot carry, and explain *why*, not *what*.
 - Write inline comments as descriptive clauses or noun phrases, not as imperatives ("Falls back to the first branch", not "Fall back to the first branch"), without a trailing full stop.

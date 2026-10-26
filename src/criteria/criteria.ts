@@ -38,7 +38,7 @@ export interface SerializedCriterion {
     [key: string]: unknown
 }
 
-// Type for criterion class constructors that can be registered
+/** Criterion class that can be registered with `registerCriterion`. */
 interface CriterionClass {
     new(...args: never[]): Criterion
     deserialize(data: SerializedCriterion): Criterion
@@ -46,8 +46,10 @@ interface CriterionClass {
 
 const registry: Map<CriterionType, CriterionClass> = new Map()
 
-// Decorator for registering criterion classes
-// Assumes that the class name ends with 'Criterion'
+/**
+ * Decorator that registers a criterion class under its type.
+ * Assumes that the class name ends with 'Criterion'.
+ */
 function registerCriterion<T extends CriterionClass>(constructor: T) {
     const type = constructor.name.replace('Criterion', '') as CriterionType
     registry.set(type, constructor)
@@ -164,7 +166,7 @@ export class ContentCriterion extends Criterion {
 }
 
 
-// Superclass for pattern-based criteria with configurable match mode
+/** Superclass for pattern-based criteria with a configurable match mode. */
 export abstract class PatternCriterion extends Criterion {
     constructor(public pattern: string, public matchMode: TextMatchMode) {
         super()
@@ -216,7 +218,7 @@ export class PathCriterion extends PatternCriterion {
     }
 
     protected getTargetValue(file: TFile): string {
-        // Use forward slashes, so that glob patterns also match Windows paths
+        // Forward slashes let glob patterns also match Windows paths
         return file.path.replace(/\\/g, '/')
     }
 
@@ -312,7 +314,7 @@ export class NotCriterion extends Criterion {
 
 // Criteria that hold sub-criteria
 
-// Returns a copy of the sub-criteria of an And/Or/Not, or null for other criteria
+/** Returns a copy of the sub-criteria of an And/Or/Not, or null for other criteria. */
 export function getChildren(criterion: Criterion): Criterion[] | null {
     if (criterion instanceof AndCriterion || criterion instanceof OrCriterion) return [...criterion.criteria]
     if (criterion instanceof NotCriterion) return [criterion.criterion]
@@ -327,7 +329,7 @@ export function wrapCriterion(criterion: Criterion, type: GroupCriterionType): C
     }
 }
 
-// Converts a group to another group type, keeping its sub-criteria
+/** Converts a group to another group type, keeping its sub-criteria. */
 export function convertGroup(group: Criterion, type: GroupCriterionType): Criterion {
     const children = getChildren(group) ?? [group]
     const [onlyChild] = children

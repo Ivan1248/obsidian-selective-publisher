@@ -2,8 +2,7 @@ import { App, Modal, Menu, Setting, ButtonComponent, DropdownComponent, TextComp
 import { LeafCriterionType, TextMatchMode, TagMatchMode, FrontmatterMatchMode, Criterion, PatternCriterion, FrontmatterCriterion, ContentCriterion, TitleCriterion, PathCriterion, AndCriterion, OrCriterion, NotCriterion, TagCriterion, LEAF_CRITERION_TYPES, GROUP_CRITERION_TYPES, isGroupType, getChildren, wrapCriterion, convertGroup } from '../criteria/criteria'
 import { validateGlobPatterns } from '../criteria/glob'
 
-// Validators return an error message, or undefined if the value is valid
-
+/** Returns an error message, or undefined if the value is valid. */
 type Validator = (value: string) => string | undefined
 
 function validateRegex(pattern: string): string | undefined {
@@ -15,7 +14,7 @@ function validateRegex(pattern: string): string | undefined {
     }
 }
 
-// Wires live validation to a text component, showing the error message in errorEl
+/** Wires live validation to a text component, showing the error message in `errorEl`. */
 function attachValidation(component: AbstractTextComponent<HTMLInputElement | HTMLTextAreaElement>, errorEl: HTMLElement, validate: Validator, setValue: (v: string) => void) {
     component.inputEl.addClass('sp-pattern-input')
     const check = (value: string) => {
@@ -58,11 +57,11 @@ function addTextField(component: AbstractTextComponent<HTMLInputElement | HTMLTe
         component.onChange(setValue)
 }
 
-// The place a criterion occupies: the root, the operand of a Not, or an entry of an And/Or
+/** The place a criterion occupies: the root, the operand of a Not, or an entry of an And/Or. */
 interface Slot {
-    // Stores a replacement criterion in the parent
+    /** Stores a replacement criterion in the parent. */
     set: (c: Criterion) => void
-    // Only for And/Or entries: replaces the criterion with zero or several and re-renders the parent
+    /** Only for And/Or entries: replaces the criterion with zero or several and re-renders the parent. */
     splice?: (criteria: Criterion[]) => void
 }
 
@@ -227,7 +226,7 @@ export class CriterionEditorModal extends Modal {
         }
     }
 
-    // Menu for restructuring the tree without losing sub-criteria
+    /** Creates the menu for restructuring the tree without losing sub-criteria. */
     createActionsMenu(criterion: Criterion, slot: Slot, replace: (c: Criterion) => void): Menu {
         const menu = new Menu()
 
