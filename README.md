@@ -11,7 +11,7 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 
 ## Requirements
 
-- Obsidian v1.4.0+
+- Obsidian v1.13.0+
 - Git installed and configured locally.
 - A local clone of target remote repository. 
 - For publishing as a website, the repository should typically contain a static site generator which is able to process Obsidian Markdown files, such as [Quartz](https://github.com/jackyzha0/quartz).

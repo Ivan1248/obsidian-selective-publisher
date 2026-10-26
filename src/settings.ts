@@ -2,7 +2,7 @@ import { Criterion, TextMatchMode, TagMatchMode, PathCriterion, OrCriterion, Not
 
 export interface SelectivePublisherSettings {
     repo: string
-    repoBranch: string
+    repoBranch: string  // Branch to publish to, or empty for the checked-out branch
     criterion: Criterion
     commitMessage: string
     showPreviewBeforePublishing: boolean
@@ -13,7 +13,7 @@ export interface SelectivePublisherSettings {
 // Default criterion: all notes except those with a path starting with an underscore, a "todo" tag, or an untitled or date-only title
 export const DEFAULT_SETTINGS: SelectivePublisherSettings = {
     repo: '/path/to/publish/repo',
-    repoBranch: 'main',
+    repoBranch: '',
     criterion: new NotCriterion(new OrCriterion([
         new PathCriterion('**/_*\n_*', TextMatchMode.Glob),
         new TagCriterion('todo', TagMatchMode.StartsWith),

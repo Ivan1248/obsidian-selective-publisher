@@ -1,4 +1,5 @@
 import { execFile } from 'child_process'
+import { isAbsolute } from 'path'
 import { promisify } from 'util'
 import { FileDiff, parseDiff } from './diff-parser'
 
@@ -11,48 +12,45 @@ interface ExecFileError extends Error {
     stderr?: string
 }
 
-function isExecFileError(error: unknown): error is ExecFileError {
-    return error instanceof Error
-}
-
 function toExecFileError(error: unknown): ExecFileError {
-    if (isExecFileError(error)) return error
-    return new Error(String(error)) as ExecFileError
+    return error instanceof Error ? error : new Error(String(error))
 }
 
-export interface RepoValidationResult {
-    isValid: boolean
+export interface BranchListResult {
+    branches: string[]
+    current?: string
     error?: string
 }
 
 export class GitHelper {
-    static async validateRepo(repoPath: string): Promise<RepoValidationResult> {
+    /**
+     * Returns the branches of the repository at `repoPath`.
+     * Also validates the path, since listing branches fails outside a repository.
+     */
+    static async listBranches(repoPath: string): Promise<BranchListResult> {
+        // Git would otherwise run in Obsidian's working folder
+        if (!isAbsolute(repoPath)) return { branches: [], error: 'Enter the absolute path of a folder.' }
         try {
-            await execFileAsync('git', ['rev-parse', '--is-inside-work-tree'], { cwd: repoPath })
-            return { isValid: true }
+            // %(HEAD) prints "*" for the checked-out branch and a space for the others
+            const { stdout } = await execFileAsync('git', ['for-each-ref', '--format=%(HEAD)%(refname:short)', 'refs/heads'], { cwd: repoPath })
+            const lines = stdout.split('\n').filter(line => line.trim().length > 0)
+            return {
+                branches: lines.map(line => line.slice(1).trim()),
+                current: lines.find(line => line.startsWith('*'))?.slice(1).trim(),
+            }
         } catch (error) {
-            const execError = toExecFileError(error)
-            const errorMessage = execError.message.includes('not a git repository')
-                ? 'Path is not a valid Git repository.'
-                : this.formatGitError(repoPath, execError, 'validate repository')
-            return { isValid: false, error: errorMessage }
+            this.logGitError(repoPath, error, 'list branches')
+            return { branches: [], error: 'Could not list branches. Check that the path is a folder in a Git repository and that Git is installed.' }
         }
     }
 
-    static async getBranches(repoPath: string): Promise<string[]> {
-        try {
-            const { stdout } = await execFileAsync('git', ['branch', '--format=%(refname:short)'], { cwd: repoPath })
-            return stdout.split('\n').map(b => b.trim()).filter(b => b.length > 0)
-        } catch (error) {
-            this.handleGitError(repoPath, error, 'fetch branches')
-        }
-    }
-
-    static async getCurrentBranch(repoPath: string): Promise<string> {
+    /** Returns the checked-out branch, or undefined if no branch is checked out. */
+    static async getCurrentBranch(repoPath: string): Promise<string | undefined> {
         try {
             // Prints "HEAD" if no branch is checked out
             const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: repoPath })
-            return stdout.trim()
+            const branch = stdout.trim()
+            return branch === 'HEAD' ? undefined : branch
         } catch (error) {
             this.handleGitError(repoPath, error, 'get current branch')
         }
@@ -112,7 +110,7 @@ export class GitHelper {
     private static formatGitError(repoPath: string, error: ExecFileError, action: string): string {
         let help = ''
         if (error.code === 'ENOENT') {
-            help = '\nThe path does not correspond to a directory inside a valid Git repository.\n'
+            help = '\nGit could not be run. Check that Git is installed and on PATH, and that the publishing folder exists.\n'
         }
 
         const dir = `Publishing path: ${repoPath}\n`
@@ -123,8 +121,12 @@ export class GitHelper {
         return `Git error during action "${action}":\n${dir}${cmd}${stdout}${stderr}\nMessage: ${error.message}${help}`
     }
 
-    private static handleGitError(repoPath: string, error: unknown, action: string): never {
+    private static logGitError(repoPath: string, error: unknown, action: string) {
         console.error(`Git error during ${action} in path ${repoPath}:`, error)
+    }
+
+    private static handleGitError(repoPath: string, error: unknown, action: string): never {
+        this.logGitError(repoPath, error, action)
         throw new Error(this.formatGitError(repoPath, toExecFileError(error), action))
     }
 

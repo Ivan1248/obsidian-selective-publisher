@@ -1,4 +1,4 @@
-import { App, Modal, Menu, Setting, ButtonComponent, DropdownComponent, TextComponent, TextAreaComponent, ExtraButtonComponent, AbstractTextComponent, setIcon } from 'obsidian'
+import { App, Modal, Menu, ButtonComponent, DropdownComponent, TextComponent, TextAreaComponent, ExtraButtonComponent, AbstractTextComponent, setIcon } from 'obsidian'
 import { LeafCriterionType, TextMatchMode, TagMatchMode, FrontmatterMatchMode, Criterion, PatternCriterion, FrontmatterCriterion, ContentCriterion, TitleCriterion, PathCriterion, AndCriterion, OrCriterion, NotCriterion, TagCriterion, LEAF_CRITERION_TYPES, GROUP_CRITERION_TYPES, isGroupType, getChildren, wrapCriterion, convertGroup } from '../criteria/criteria'
 import { validateGlobPatterns } from '../criteria/glob'
 
@@ -28,14 +28,6 @@ function attachValidation(component: AbstractTextComponent<HTMLInputElement | HT
         setValue(value)
     })
     check(component.getValue())
-}
-
-// Helper to add a textarea for glob patterns with live validation to a setting
-export function addGlobField(setting: Setting, getValue: () => string, setValue: (v: string) => void) {
-    // Show the error below the setting rather than inside it
-    const errorEl = setting.settingEl.createDiv({ cls: 'sp-field-error' })
-    setting.settingEl.after(errorEl)
-    setting.addTextArea((textArea) => attachValidation(textArea.setValue(getValue()), errorEl, validateGlobPatterns, setValue))
 }
 
 // Compact inline controls for the criterion editor, labelled by placeholder and aria-label

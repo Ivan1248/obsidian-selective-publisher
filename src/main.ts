@@ -120,20 +120,21 @@ export default class SelectivePublisherPlugin extends Plugin {
                 return
             }
 
-            if (!await this.switchToPublishingBranch()) return
+            const branch = await this.switchToPublishingBranch()
+            if (!branch) return
 
             const operationName = commitOnly ? 'commit' : 'publish'
             new Notice(`Starting ${operationName} operation...`)
 
             // Pulling first avoids conflicts with changes made to the publishing branch elsewhere
             if (!commitOnly) {
-                await this.pullFromRemote()
+                await this.pullFromRemote(branch)
             }
 
             const publishableFiles = cachedPublishableFiles ?? await this.getPublishableFiles()
             await this.publishingService.updateFilesInRepo(publishableFiles)
 
-            await this.commitAndPush(commitOnly)
+            await this.commitAndPush(commitOnly, branch)
             const noteCount = publishableFiles.filter(f => f.extension === 'md').length
             new Notice(`Successfully ${operationName}ed ${noteCount} notes.`)
         } catch (error) {
@@ -142,33 +143,35 @@ export default class SelectivePublisherPlugin extends Plugin {
         }
     }
 
-    private async switchToPublishingBranch(): Promise<boolean> {
-        const branch = this.settings.repoBranch
+    /** Switches to the publishing branch and returns it, or returns undefined if there is none. */
+    private async switchToPublishingBranch(): Promise<string | undefined> {
+        const currentBranch = await GitHelper.getCurrentBranch(this.settings.repo)
+        const branch = this.settings.repoBranch || currentBranch
         if (!branch) {
-            new Notice('No publishing branch selected. Please check the settings.')
-            return false
+            new Notice('No branch is checked out. Please select a branch in the settings.')
+            return undefined
         }
-        if (await GitHelper.getCurrentBranch(this.settings.repo) !== branch) {
+        if (currentBranch !== branch) {
             await GitHelper.switchBranch(this.settings.repo, branch)
             new Notice(`Switched to branch "${branch}".`)
         }
-        return true
+        return branch
     }
 
-    private async pullFromRemote() {
+    private async pullFromRemote(branch: string) {
         try {
-            await GitHelper.pull(this.settings.repo, this.settings.repoBranch)
+            await GitHelper.pull(this.settings.repo, branch)
         } catch (error) {
             throw new Error(`Cannot sync with remote: ${(error as Error).message}`)
         }
     }
 
-    private async commitAndPush(commitOnly: boolean) {
+    private async commitAndPush(commitOnly: boolean, branch: string) {
         try {
             await GitHelper.add(this.settings.repo)
             await GitHelper.commit(this.settings.repo, this.settings.commitMessage)
             if (!commitOnly) {
-                await GitHelper.push(this.settings.repo, this.settings.repoBranch)
+                await GitHelper.push(this.settings.repo, branch)
             }
         } catch (error) {
             console.error('Git operation failed:', error)

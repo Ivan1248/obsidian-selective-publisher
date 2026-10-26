@@ -1,40 +1,128 @@
-import { App, PluginSettingTab, Setting, Notice, DropdownComponent, TextComponent } from 'obsidian'
+import { App, PluginSettingTab, Setting, Notice, DropdownComponent, TextComponent, SettingDefinitionItem, debounce } from 'obsidian'
 import SelectivePublisherPlugin from '../main'
-import { CriterionEditorModal, addGlobField } from './criterion-editor-modal'
-import { GitHelper } from '../publishing/git-helper'
+import { validateGlobPatterns } from '../criteria/glob'
+import { CriterionEditorModal } from './criterion-editor-modal'
+import { BranchListResult, GitHelper } from '../publishing/git-helper'
 import { dialog } from '@electron/remote'
 
 export class SelectivePublisherSettingTab extends PluginSettingTab {
     plugin: SelectivePublisherPlugin
+    /** Update functions of the rendered setting rows that depend on the publishing folder */
+    private readonly repoListeners = new Set<(result: BranchListResult) => void>()
+    /** Branches of the publishing folder, listed once for all setting rows until the folder changes */
+    private branchListing?: Promise<BranchListResult>
+    /** Validates the typed folder only after a pause in typing. */
+    private readonly notifyRepoChangedDebounced = debounce(() => {
+        this.branchListing = undefined
+        for (const update of this.repoListeners) void this.passBranches(update)
+    }, 500, true)
 
     constructor(app: App, plugin: SelectivePublisherPlugin) {
         super(app, plugin)
         this.plugin = plugin
     }
 
-    display(): void {
-        const { containerEl } = this
+    getSettingDefinitions(): SettingDefinitionItem[] {
+        return [
+            {
+                type: 'group',
+                heading: 'Publishing repository',
+                items: [
+                    {
+                        name: 'Publishing folder',
+                        desc: 'The content folder in a local Git repository. Files in it that are not published are deleted.',
+                        aliases: ['directory', 'path'],
+                        render: (setting) => this.renderPublishingFolderSetting(setting),
+                    },
+                    {
+                        name: 'Branch',
+                        desc: 'Git branch to push the published notes to.',
+                        render: (setting) => this.renderBranchSetting(setting),
+                    },
+                    {
+                        name: 'Commit message',
+                        desc: 'Used for every commit.',
+                        control: { type: 'text', key: 'commitMessage', placeholder: 'Enter commit message' },
+                    },
+                ],
+            },
+            {
+                type: 'group',
+                heading: 'Files to publish',
+                items: [
+                    {
+                        name: 'Show preview before publishing',
+                        desc: 'Review changes, with an option to commit without pushing.',
+                        aliases: ['diff'],
+                        control: { type: 'toggle', key: 'showPreviewBeforePublishing' },
+                    },
+                    {
+                        name: 'Publishing criterion',
+                        desc: 'Applies to Markdown files only.',
+                        aliases: ['filter', 'frontmatter', 'selection'],
+                        render: (setting) => this.renderCriterionSetting(setting),
+                    },
+                    {
+                        name: 'Publish attachments',
+                        desc: 'Publish non-Markdown files linked or embedded in published notes.',
+                        control: { type: 'toggle', key: 'publishAttachments' },
+                    },
+                    {
+                        name: 'Extra file patterns',
+                        desc: 'Glob patterns, one per line, for vault files to publish regardless of the criterion. Supports !, #, and ** syntax.',
+                        aliases: ['include'],
+                        control: {
+                            type: 'textarea',
+                            key: 'extraFilePatterns',
+                            validate: validateGlobPatterns,
+                        },
+                    },
+                ],
+            },
+        ]
+    }
 
-        containerEl.empty()
-        new Setting(containerEl).setName('Publishing repository').setHeading()
+    // Settings need saving through the plugin, which serializes the criterion
+    async setControlValue(key: string, value: unknown): Promise<void> {
+        Object.assign(this.plugin.settings, { [key]: value })
+        await this.plugin.saveSettings()
+    }
 
-        let repoContentPathText: TextComponent
-        new Setting(containerEl)
-            .setName('Publishing directory')
-            .setDesc('The content directory in a local Git repository. Files in it that are not published are deleted.')
+    // Branches are listed again the next time the tab is shown
+    hide(): void {
+        this.branchListing = undefined
+        super.hide()
+    }
+
+    /**
+     * Calls `update` with the branches of the publishing folder, now and after each folder change.
+     * Returns a cleanup function for the setting row, which Obsidian calls before it removes the row.
+     */
+    private watchBranches(update: (result: BranchListResult) => void): () => void {
+        this.repoListeners.add(update)
+        void this.passBranches(update)
+        return () => { this.repoListeners.delete(update) }
+    }
+
+    /** Calls `update` with the branches of the publishing folder, unless the folder changed or the setting row was removed in the meantime. */
+    private async passBranches(update: (result: BranchListResult) => void) {
+        const listing = this.branchListing ??= GitHelper.listBranches(this.plugin.settings.repo)
+        const result = await listing
+        if (listing === this.branchListing && this.repoListeners.has(update)) update(result)
+    }
+
+    private renderPublishingFolderSetting(setting: Setting) {
+        let folderText: TextComponent
+        setting
             .addText((text) => {
-                repoContentPathText = text
-                text.setPlaceholder('Enter directory path')
+                folderText = text
+                text.setPlaceholder('Enter folder path')
                     .setValue(this.plugin.settings.repo)
-                    .onChange(async (value) => {
-                        this.plugin.settings.repo = value
-                        await this.plugin.saveSettings()
-                        await this.validateAndRefreshRepoBranches(repoBranchDropdown)
-                    })
+                    .onChange(async (value) => { await this.setPublishingFolder(value) })
             })
             .addExtraButton((btn) => btn
                 .setIcon('folder')
-                .setTooltip('Select content directory in repository')
+                .setTooltip('Select content folder in repository')
                 .onClick(async () => {
                     try {
                         const result = await dialog.showOpenDialog({
@@ -44,66 +132,44 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
 
                         if (!result.canceled && result.filePaths.length > 0) {
                             const selectedPath = result.filePaths[0]!
-                            this.plugin.settings.repo = selectedPath
-                            repoContentPathText.setValue(selectedPath)
-                            await this.plugin.saveSettings()
-                            await this.validateAndRefreshRepoBranches(repoBranchDropdown)
+                            folderText.setValue(selectedPath)
+                            await this.setPublishingFolder(selectedPath)
+                            // A picked folder is validated without waiting
+                            this.notifyRepoChangedDebounced.run()
                         }
                     } catch (error) {
-                        console.error('Directory picker error:', error)
-                        new Notice('Failed to open directory picker.')
+                        console.error('Folder picker error:', error)
+                        new Notice('Failed to open folder picker.')
                     }
                 })
             )
+        return this.watchBranches(({ error }) => { setting.setErrorMessage(error ?? null) })
+    }
 
-        let repoBranchDropdown: DropdownComponent
-        new Setting(containerEl)
-            .setName('Branch')
-            .setDesc('Git branch to push the published notes to.')
-            .addDropdown((dropdown) => {
-                repoBranchDropdown = dropdown
-                void this.refreshRepoBranchDropdown(dropdown)
-                dropdown.onChange(async (value) => {
-                    this.plugin.settings.repoBranch = value
-                    await this.plugin.saveSettings()
-                })
-            })
+    private renderBranchSetting(setting: Setting) {
+        let branchDropdown: DropdownComponent
+        setting.addDropdown((dropdown) => {
+            branchDropdown = dropdown
+            dropdown.onChange(async (value) => { await this.setControlValue('repoBranch', value) })
+        })
+        return this.watchBranches((result) => this.fillBranchDropdown(branchDropdown, result))
+    }
 
-        new Setting(containerEl)
-            .setName('Commit message')
-            .setDesc('Used for every commit.')
-            .addText((text) =>
-                text.setPlaceholder('Enter commit message')
-                    .setValue(this.plugin.settings.commitMessage)
-                    .onChange(async (value) => {
-                        this.plugin.settings.commitMessage = value
-                        await this.plugin.saveSettings()
-                    })
-            )
-
-        new Setting(containerEl).setName('Files to publish').setHeading()
-
-        new Setting(containerEl)
-            .setName('Show preview before publishing')
-            .setDesc('Review changes, with an option to commit without pushing.')
-            .addToggle((toggle) =>
-                toggle.setValue(this.plugin.settings.showPreviewBeforePublishing)
-                    .onChange(async (value) => {
-                        this.plugin.settings.showPreviewBeforePublishing = value
-                        await this.plugin.saveSettings()
-                    })
-            )
-
-        const criterionSetting = new Setting(containerEl)
-            .setName('Publishing criterion')
-            .setDesc('Applies to Markdown files only.')
+    private renderCriterionSetting(setting: Setting) {
+        // Representation of the current criterion, spanning the full width below the name and buttons
+        setting.settingEl.addClass('sp-criterion-setting')
+        const summaryEl = setting.settingEl.createEl('pre', {
+            text: this.plugin.settings.criterion.getSummary(),
+            cls: 'sp-criterion-summary',
+        })
+        setting
             .addButton((btn) => btn
                 .setButtonText('Edit criterion')
                 .setCta()
                 .onClick(() => {
                     new CriterionEditorModal(this.app, this.plugin.settings.criterion, (updatedCriterion) => {
-                        this.plugin.settings.criterion = updatedCriterion
-                        void this.plugin.saveSettings().then(() => this.display())
+                        summaryEl.setText(updatedCriterion.getSummary())
+                        void this.setControlValue('criterion', updatedCriterion)
                     }).open()
                 })
             )
@@ -111,76 +177,28 @@ export class SelectivePublisherSettingTab extends PluginSettingTab {
                 .setButtonText('Preview publishable files')
                 .onClick(() => { void this.plugin.previewPublishableFiles() })
             )
-        // Representation of the current criterion, spanning the full width below the name and buttons
-        criterionSetting.settingEl.addClass('sp-criterion-setting')
-        criterionSetting.settingEl.createEl('pre', {
-            text: this.plugin.settings.criterion.getSummary(),
-            cls: 'sp-criterion-summary',
-        })
-
-        new Setting(containerEl)
-            .setName('Publish attachments')
-            .setDesc('Publish non-Markdown files linked or embedded in published notes.')
-            .addToggle((toggle) =>
-                toggle.setValue(this.plugin.settings.publishAttachments)
-                    .onChange(async (value) => {
-                        this.plugin.settings.publishAttachments = value
-                        await this.plugin.saveSettings()
-                    })
-            )
-
-        const extraPatternsSetting = new Setting(containerEl)
-            .setName('Extra file patterns')
-            .setDesc('Glob patterns, one per line, for vault files to publish regardless of the criterion. Supports !, #, and ** syntax.')
-        addGlobField(extraPatternsSetting, () => this.plugin.settings.extraFilePatterns,
-            (value) => {
-                void (async () => {
-                    this.plugin.settings.extraFilePatterns = value
-                    await this.plugin.saveSettings()
-                })()
-            }
-        )
-
-        void this.validateAndRefreshRepoBranches(repoBranchDropdown!)
+        // The summary is removed, as Obsidian reuses the setting row element when it renders the row again
+        return () => summaryEl.remove()
     }
 
-    async validateAndRefreshRepoBranches(dropdown?: DropdownComponent) {
-        const result = await GitHelper.validateRepo(this.plugin.settings.repo)
-        if (!result.isValid) {
-            new Notice(result.error || 'Invalid repository path')
-        }
-        if (dropdown) {
-            await this.refreshRepoBranchDropdown(dropdown)
-        }
+    private async setPublishingFolder(folder: string) {
+        await this.setControlValue('repo', folder)
+        this.notifyRepoChangedDebounced()
     }
 
-    async refreshRepoBranchDropdown(dropdown: DropdownComponent) {
-        const branches = await GitHelper.getBranches(this.plugin.settings.repo)
-            .catch(() => [] as string[])
-
-        // Rebuilds the options from the current branches
-        const selectEl = dropdown.selectEl
-        selectEl.empty()
-
-        if (branches.length === 0) {
-            dropdown.addOption('', 'No branches found')
-            dropdown.setDisabled(true)
-            this.plugin.settings.repoBranch = ''
-        } else {
-            dropdown.setDisabled(false)
-            branches.forEach(branch => {
-                dropdown.addOption(branch, branch)
-            })
-
-            if (!branches.includes(this.plugin.settings.repoBranch)) {
-                // Falls back to the first branch, and saves it, if the current one is not listed
-                this.plugin.settings.repoBranch = branches[0]!
-                await this.plugin.saveSettings()
-            }
+    /** Lists the branches without changing the saved branch, which is marked if it is not found. */
+    private fillBranchDropdown(dropdown: DropdownComponent, { branches, current }: BranchListResult) {
+        const savedBranch = this.plugin.settings.repoBranch
+        dropdown.selectEl.empty()
+        // Option for the empty saved branch (see SelectivePublisherSettings.repoBranch)
+        dropdown.addOption('', current ? `Current branch (${current})` : 'Current branch')
+        if (savedBranch && !branches.includes(savedBranch)) {
+            dropdown.addOption(savedBranch, `${savedBranch} (not found)`)
         }
-
-        dropdown.setValue(this.plugin.settings.repoBranch)
+        for (const branch of branches) {
+            dropdown.addOption(branch, branch)
+        }
+        dropdown.setDisabled(branches.length === 0)
+        dropdown.setValue(savedBranch)
     }
-
-
 }
