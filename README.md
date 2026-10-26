@@ -7,14 +7,14 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 
 - Filtering of notes and attachments based on tags, frontmatter, path, or content, and path-based filtering of other files.
 - Committing and pushing to a target Git repository.
-- Review of changed files (added, modified, deleted) before publishing.
+- Review of changes with diffs before publishing.
 
 ## Requirements
 
-- Obsidian v0.15.0+
+- Obsidian v1.4.0+
 - Git installed and configured locally.
 - A local clone of target remote repository. 
-- For publishing as a website, the repository can contain a static site generator such as [Quartz](https://github.com/jackyzha0/quartz), which is able to process Obsidian Markdown files.
+- For publishing as a website, the repository should typically contain a static site generator which is able to process Obsidian Markdown files, such as [Quartz](https://github.com/jackyzha0/quartz).
 
 ## Installation
 
@@ -26,7 +26,7 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 1. Clone your target repository (e.g., GitHub Pages) to a local folder.
 2. In the plugin settings:
    - Set "Publishing directory" to the absolute local path of the repository or a directory within it. (If Quartz is used, this is the `content` directory.)
-   - Optionally, change the "Publishing branch" (e.g., `main`).
+   - Optionally, change the "Branch" (e.g., `main`).
    - Configure "Publishing criterion" (see below).
    - Optionally, uncheck "Show preview before publishing" to skip the preview modal when publishing.
 
@@ -35,30 +35,19 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 ### Publishing criterion
 
 The plugin evaluates each markdown file against a tree combining criteria:
-- **Tag**: Matches exact Obsidian tag or hierarchical subtags (e.g., `public` matches `#public/blog`).
-- **Frontmatter**: Matches a specific key and value in YAML frontmatter, with support for regex in the value field.
-- **Folder**: Includes or excludes specific directories.
-- **Title**: Matches the file basename (without extension). Supports substring or regex.
-- **Path**: Matches the relative path from vault root. Supports substring or regex.
-- **Content**: Matches body text based on a regex search.
+- **Tag**: Matches an Obsidian tag exactly, by prefix, or by substring (e.g., `public` with "starts with" matches `#public/blog`).
+- **Frontmatter**: Matches a YAML frontmatter key by existence, or its value by equality, substring, or regex.
+- **Title**: Matches the file basename (without extension) by substring, regex, or glob.
+- **Path**: Matches the path relative to the vault root by substring, regex, or glob.
+- **Content**: Matches the file content with a regex.
 
 Criteria can be combined with logical operators: **AND**, **OR**, and **NOT**.
 
 ### Publishing
 
-There are two ways to publish notes:
-- Click the ribbon button with a paper plane icon. By default, this opens a preview modal before publishing.
-- Run the command `Publish notes`. This publishes the changes.
+Publish with the ribbon button (paper plane icon) or the **Publish notes** command. If the "Show preview before publishing" setting is enabled (the default), a preview opens first. The **Preview publishable files** command opens the same preview.
 
-The preview modal displays the matching files and their status (new, modified, deleted, unmodified) relative to the target repository.
-
-You can choose to publish (commit and push) or just commit (local only).
-
-### Commands
-
-- **Publish notes**: Publish all matching notes. Shows preview first if enabled in settings.
-- **Preview publishable files**: Preview files that match the criteria with their status (new, modified, deleted, unmodified).
-- **Ribbon button** (paper plane icon): Quick shortcut to publish notes.
+The preview lists the matching files with their status relative to the target repository (new, modified, deleted, unmodified), can show file diffs, and lets you publish (commit and push) or just commit (local only).
 
 ## Development
 
@@ -69,14 +58,14 @@ npm run build      # type-check and build for production
 npm run lint       # run ESLint
 ```
 
-To test locally, put `main.js` and `manifest.json` into `<your-vault>/.obsidian/plugins/wikilink-helper/` and reload the plugin.
+To test locally, put `main.js` and `manifest.json` into `<your-vault>/.obsidian/plugins/selective-publisher/` and reload the plugin.
 
 ## Other information
 
 - [Disclosures](https://docs.obsidian.md/Developer+policies#Disclosures) per Obsidian developer policies:
     - Network use. The network is used for synchronizing with the remote Git repository when publishing. No data is sent to any other servers.
     - Accessing files outside of Obsidian vaults. The plugin manages the content directory in the local repository and the `git` command.
-- AI agents used in development: Claude 3.7 Sonnet – Opus 4.6, GPT-4o – GPT-5.2, Gemini 3 Pro and Flash
+- AI agents used in development: Claude 3.7 Sonnet – Opus 4.6, GPT-4o – GPT-5.2, Gemini 3 Pro and Flash, Claude Opus 5.5
 
 ## Related projects
 
@@ -87,7 +76,7 @@ Obsidian plugins:
    - Has less flexible filtering of files.
 - [Quartz Syncer](https://github.com/saberzero1/quartz-syncer)
    - Publishes through authentication to different Git providers.
-   - Has more features, including forntmatter processing and integration with other plugings such as Dataview.
+   - Has more features, including frontmatter processing and integration with other plugins such as Dataview.
    - Has less flexible filtering of files.
 - [Digital Garden](https://github.com/oleeskild/obsidian-digital-garden)
 
