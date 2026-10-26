@@ -1,38 +1,30 @@
 import picomatch from 'picomatch'
 
 const GLOB_OPTIONS = { dot: true, contains: true }
+// Without debug, picomatch hides syntax errors by turning the invalid pattern into one that matches nothing
+const GLOB_VALIDATION_OPTIONS = { ...GLOB_OPTIONS, debug: true }
+
+// Compiled lines of each multi-line pattern, as matching is repeated for every vault file
+const compiledPatterns = new Map<string, { isNegated: boolean, isMatch: picomatch.Matcher }[]>()
 
 /**
- * Information extracted from a single line of a glob pattern.
+ * Parses a line of a .gitignore-style glob pattern, handling trimming and negation (!).
+ * Returns undefined for a line without a pattern, such as an empty line or a comment (#).
  */
-interface GlobLineInfo {
-    isNegated: boolean
-    glob: string
-}
-
-/**
- * Parses a single line of a .gitignore-style glob pattern.
- * Handles trimming, comments (#), and negation (!).
- */
-function parseGlobLine(line: string): GlobLineInfo {
+function parseGlobLine(line: string): { isNegated: boolean, glob: string } | undefined {
     const trimmed = line.trim()
-    if (trimmed === '' || trimmed.startsWith('#')) {
-        return { isNegated: false, glob: '' }
-    }
-    const lineIsNegated = trimmed.startsWith('!')
-    const glob = lineIsNegated ? trimmed.slice(1) : trimmed
-    return { isNegated: lineIsNegated, glob }
+    const isNegated = trimmed.startsWith('!')
+    const glob = isNegated ? trimmed.slice(1) : trimmed
+    return glob === '' || trimmed.startsWith('#') ? undefined : { isNegated, glob }
 }
 
-/**
- * Returns true if the given line is a valid .gitignore-style glob pattern.
- */
-export function isValidGlobPattern(line: string, { allowNegated = false, allowEmptyOrComment = false } = {}): boolean {
-    const { isNegated, glob } = parseGlobLine(line)
-    if (glob.length === 0) return allowEmptyOrComment
+/** Returns true if the given line has no pattern or a valid .gitignore-style glob pattern. */
+function isValidGlobLine(line: string): boolean {
+    const parsed = parseGlobLine(line)
+    if (!parsed) return true
     try {
-        picomatch(glob, GLOB_OPTIONS)
-        return allowNegated || !isNegated
+        picomatch(parsed.glob, GLOB_VALIDATION_OPTIONS)
+        return true
     } catch {
         return false
     }
@@ -44,10 +36,7 @@ export function isValidGlobPattern(line: string, { allowNegated = false, allowEm
  * Returns an error message listing the invalid lines, or undefined if all are valid.
  */
 export function validateGlobPatterns(value: string): string | undefined {
-    const invalidLineNumbers = value.split('\n')
-        .map((line, i) => isValidGlobPattern(line, { allowNegated: true, allowEmptyOrComment: true }) ? -1 : i + 1)
-        .filter(n => n !== -1)
-
+    const invalidLineNumbers = value.split('\n').flatMap((line, i) => isValidGlobLine(line) ? [] : [i + 1])
     if (invalidLineNumbers.length === 0) return undefined
     return invalidLineNumbers.length === 1
         ? `Invalid glob pattern on line ${invalidLineNumbers[0]}`
@@ -59,18 +48,20 @@ export function validateGlobPatterns(value: string): string | undefined {
  * Supports # comments, ! negation, and last-match-wins semantics.
  */
 export function matchesGlobPatterns(multiLinePattern: string, input: string): boolean {
-    let inputIsMatched = false
-    for (const rawLine of multiLinePattern.split('\n')) {
-        const { isNegated, glob } = parseGlobLine(rawLine)
-        if (glob.length === 0) continue
+    let compiled = compiledPatterns.get(multiLinePattern)
+    if (!compiled) {
+        // An invalid pattern matches nothing, as it is already reported where it is edited
+        compiled = multiLinePattern.split('\n').flatMap((line) => {
+            const parsed = parseGlobLine(line)
+            return parsed ? [{ isNegated: parsed.isNegated, isMatch: picomatch(parsed.glob, GLOB_OPTIONS) }] : []
+        })
+        compiledPatterns.set(multiLinePattern, compiled)
+    }
 
-        try {
-            const isMatch = picomatch(glob, GLOB_OPTIONS)
-            if (isMatch(input)) {
-                inputIsMatched = !isNegated
-            }
-        } catch {
-            console.error(`Invalid glob pattern: ${glob}`)
+    let inputIsMatched = false
+    for (const { isNegated, isMatch } of compiled) {
+        if (isMatch(input)) {
+            inputIsMatched = !isNegated
         }
     }
     return inputIsMatched
