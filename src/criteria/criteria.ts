@@ -38,19 +38,19 @@ export interface SerializedCriterion {
     [key: string]: unknown
 }
 
-const registry: Map<CriterionType, typeof Criterion> = new Map()
-
 // Type for criterion class constructors that can be registered
 interface CriterionClass {
     new(...args: never[]): Criterion
     deserialize(data: SerializedCriterion): Criterion
 }
 
+const registry: Map<CriterionType, CriterionClass> = new Map()
+
 // Decorator for registering criterion classes
 // Assumes that the class name ends with 'Criterion'
 function registerCriterion<T extends CriterionClass>(constructor: T) {
     const type = constructor.name.replace('Criterion', '') as CriterionType
-    registry.set(type, constructor as unknown as typeof Criterion)
+    registry.set(type, constructor)
 }
 
 
