@@ -39,6 +39,22 @@ export function isValidGlobPattern(line: string, { allowNegated = false, allowEm
 }
 
 /**
+ * Validates line-separated .gitignore-style glob patterns.
+ * Supports: * ** ? [chars] ! (negate) # (comment) leading / (anchor)
+ * Returns an error message listing the invalid lines, or undefined if all are valid.
+ */
+export function validateGlobPatterns(value: string): string | undefined {
+    const invalidLineNumbers = value.split('\n')
+        .map((line, i) => isValidGlobPattern(line, { allowNegated: true, allowEmptyOrComment: true }) ? -1 : i + 1)
+        .filter(n => n !== -1)
+
+    if (invalidLineNumbers.length === 0) return undefined
+    return invalidLineNumbers.length === 1
+        ? `Invalid glob pattern on line ${invalidLineNumbers[0]}`
+        : `Invalid glob patterns on lines ${invalidLineNumbers.join(', ')}`
+}
+
+/**
  * Tests a value against line-separated .gitignore-style glob patterns.
  * Supports # comments, ! negation, and last-match-wins semantics.
  */

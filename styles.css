@@ -73,7 +73,7 @@
 }
 
 .sp-criterion-row-extra:empty,
-.sp-pattern-error:empty {
+.sp-field-error:empty {
     display: none;
 }
 
@@ -111,7 +111,7 @@ button.sp-criterion-add:hover {
     color: var(--text-normal);
 }
 
-.sp-pattern-error {
+.sp-field-error {
     color: var(--text-error);
     font-size: var(--font-ui-smaller);
 }

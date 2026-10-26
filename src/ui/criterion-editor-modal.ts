@@ -1,31 +1,18 @@
 import { App, Modal, Menu, Setting, ButtonComponent, DropdownComponent, TextComponent, TextAreaComponent, ExtraButtonComponent, AbstractTextComponent, setIcon } from 'obsidian'
 import { LeafCriterionType, TextMatchMode, TagMatchMode, FrontmatterMatchMode, Criterion, PatternCriterion, FrontmatterCriterion, ContentCriterion, TitleCriterion, PathCriterion, AndCriterion, OrCriterion, NotCriterion, TagCriterion, LEAF_CRITERION_TYPES, GROUP_CRITERION_TYPES, isGroupType, getChildren, wrapCriterion, convertGroup } from '../criteria/criteria'
-import { isValidGlobPattern } from '../criteria/glob'
+import { validateGlobPatterns } from '../criteria/glob'
 
-// Validators return an error message, or null if the value is valid
+// Validators return an error message, or undefined if the value is valid
 
-type Validator = (value: string) => string | null
+type Validator = (value: string) => string | undefined
 
-function validateRegex(pattern: string): string | null {
+function validateRegex(pattern: string): string | undefined {
     try {
         new RegExp(pattern)
-        return null
+        return undefined
     } catch {
         return 'Invalid regex'
     }
-}
-
-// Validates line-separated .gitignore-like glob patterns
-// Supports: * ** ? [chars] ! (negate) # (comment) leading / (anchor)
-function validateGlobPatterns(value: string): string | null {
-    const invalidLineNumbers = value.split('\n')
-        .map((line, i) => isValidGlobPattern(line, { allowNegated: true, allowEmptyOrComment: true }) ? -1 : i + 1)
-        .filter(n => n !== -1)
-
-    if (invalidLineNumbers.length === 0) return null
-    return invalidLineNumbers.length === 1
-        ? `Invalid glob pattern on line ${invalidLineNumbers[0]}`
-        : `Invalid glob patterns on lines ${invalidLineNumbers.join(', ')}`
 }
 
 // Wires live validation to a text component, showing the error message in errorEl
@@ -34,7 +21,7 @@ function attachValidation(component: AbstractTextComponent<HTMLInputElement | HT
     const check = (value: string) => {
         const error = validate(value)
         errorEl.setText(error ?? '')
-        if (error !== null) component.inputEl.setAttribute('aria-invalid', 'true')
+        if (error !== undefined) component.inputEl.setAttribute('aria-invalid', 'true')
         else component.inputEl.removeAttribute('aria-invalid')
     }
     component.onChange((value) => {
@@ -47,7 +34,7 @@ function attachValidation(component: AbstractTextComponent<HTMLInputElement | HT
 // Helper to add a textarea for glob patterns with live validation to a setting
 export function addGlobField(setting: Setting, getValue: () => string, setValue: (v: string) => void) {
     // Show the error below the setting rather than inside it
-    const errorEl = setting.settingEl.createDiv({ cls: 'sp-pattern-error' })
+    const errorEl = setting.settingEl.createDiv({ cls: 'sp-field-error' })
     setting.settingEl.after(errorEl)
     setting.addTextArea((textArea) => attachValidation(textArea.setValue(getValue()), errorEl, validateGlobPatterns, setValue))
 }
@@ -147,7 +134,7 @@ export class CriterionEditorModal extends Modal {
         const row = bodyEl.createDiv({ cls: 'sp-criterion-row' })
         // Multi-line fields and validation errors go below the row
         const extraEl = bodyEl.createDiv({ cls: 'sp-criterion-row-extra' })
-        const errorEl = bodyEl.createDiv({ cls: 'sp-pattern-error' })
+        const errorEl = bodyEl.createDiv({ cls: 'sp-field-error' })
 
         // Changing the match mode changes which fields are shown
         const addModeDropdown = <T extends string>(modes: readonly T[], value: T, setMode: (v: T) => void) =>
