@@ -18,7 +18,7 @@ A plugin for Obsidian that selectively publishes notes to a Git repository based
 
 ## Installation
 
-1. Search for "Selective Publisher" in Obsidian's Community Plugins.
+1. Search for [Selective Publisher](https://community.obsidian.md/plugins/selective-publisher) in Obsidian's Community Plugins.
 2. Click "Install" and then "Enable".
 
 ## Setup
