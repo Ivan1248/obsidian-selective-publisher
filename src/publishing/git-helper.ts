@@ -39,7 +39,7 @@ export class GitHelper {
                 current: lines.find(line => line.startsWith('*'))?.slice(1).trim(),
             }
         } catch (error) {
-            this.logGitError(repoPath, error, 'list branches')
+            console.error(`Git error during list branches in path ${repoPath}:`, error)
             return { branches: [], error: 'Could not list branches. Check that the path is a folder in a Git repository and that Git is installed.' }
         }
     }
@@ -121,12 +121,7 @@ export class GitHelper {
         return `Git error during action "${action}":\n${dir}${cmd}${stdout}${stderr}\nMessage: ${error.message}${help}`
     }
 
-    private static logGitError(repoPath: string, error: unknown, action: string) {
-        console.error(`Git error during ${action} in path ${repoPath}:`, error)
-    }
-
     private static handleGitError(repoPath: string, error: unknown, action: string): never {
-        this.logGitError(repoPath, error, action)
         throw new Error(this.formatGitError(repoPath, toExecFileError(error), action))
     }
 

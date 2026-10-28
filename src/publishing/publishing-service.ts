@@ -83,32 +83,13 @@ export class PublishingService {
         publishableFiles: TFile[], branch: string, { commitOnly = false } = {},
     ): Promise<void> {
         // Pulling first avoids conflicts with changes made to the publishing branch elsewhere
-        if (!commitOnly) await this.pullFromRemote(branch)
+        if (!commitOnly) await GitHelper.pull(this.repoPath, branch)
         // Without the index entries, `git add` records the vault's paths, also case-only renames
         await GitHelper.removeFiles(this.repoPath, PUBLISHED_PATHSPEC)
         await this.copyFilesToRepo(publishableFiles)
-        await this.commitAndPush(commitOnly, branch)
-    }
-
-    private async pullFromRemote(branch: string) {
-        try {
-            await GitHelper.pull(this.repoPath, branch)
-        } catch (error) {
-            throw new Error(`Cannot sync with remote: ${(error as Error).message}`)
-        }
-    }
-
-    private async commitAndPush(commitOnly: boolean, branch: string) {
-        try {
-            await GitHelper.add(this.repoPath)
-            await GitHelper.commit(this.repoPath, this.settings.commitMessage)
-            if (!commitOnly) {
-                await GitHelper.push(this.repoPath, branch)
-            }
-        } catch (error) {
-            console.error('Git operation failed:', error)
-            throw new Error(`Git operation failed: ${(error as Error).message}`)
-        }
+        await GitHelper.add(this.repoPath)
+        await GitHelper.commit(this.repoPath, this.settings.commitMessage)
+        if (!commitOnly) await GitHelper.push(this.repoPath, branch)
     }
 
     /** Returns the diff between the published copy of a file and its current vault version. */
