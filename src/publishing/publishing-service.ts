@@ -4,6 +4,7 @@ import * as path from 'path'
 import { Buffer } from "buffer"
 import { GitHelper } from './git-helper'
 import { FileDiff } from './diff-parser'
+import { SelectivePublisherSettings } from '../settings'
 
 export enum FileUpdateStatus {
     New = 'new',
@@ -17,8 +18,31 @@ export interface FileWithStatus {
     status: FileUpdateStatus
 }
 
+export interface PublishingBranch {
+    name: string
+    /** Whether the branch was checked out by the switch, rather than checked out already */
+    isNewlyCheckedOut: boolean
+}
+
 export class PublishingService {
-    constructor(private app: App, private repoPath: string) { }
+    constructor(private app: App, private settings: SelectivePublisherSettings) { }
+
+    private get repoPath(): string {
+        return this.settings.repo
+    }
+
+    /**
+     * Checks out the branch set in the settings and returns it.
+     * If no branch is set, returns the checked-out branch, or undefined if there is none.
+     */
+    public async switchToPublishingBranch(): Promise<PublishingBranch | undefined> {
+        const currentBranch = await GitHelper.getCurrentBranch(this.repoPath)
+        const name = this.settings.repoBranch || currentBranch
+        if (!name) return undefined
+        const isNewlyCheckedOut = name !== currentBranch
+        if (isNewlyCheckedOut) await GitHelper.switchBranch(this.repoPath, name)
+        return { name, isNewlyCheckedOut }
+    }
 
     public async getPublishingStatuses(publishableFiles: TFile[]): Promise<FileWithStatus[]> {
         // Statuses of the publishable files
@@ -39,9 +63,43 @@ export class PublishingService {
         return [...fileStatuses, ...deletedStatuses]
     }
 
-    public async updateFilesInRepo(publishableFiles: TFile[]): Promise<void> {
+    public async hasUncommittedChanges(): Promise<boolean> {
+        return GitHelper.hasUncommittedChanges(this.repoPath)
+    }
+
+    /**
+     * Updates the published files on `branch` and commits them.
+     * Unless `commitOnly` is set, also pulls before and pushes after.
+     */
+    public async publishFiles(
+        publishableFiles: TFile[], branch: string, { commitOnly = false } = {},
+    ): Promise<void> {
+        // Pulling first avoids conflicts with changes made to the publishing branch elsewhere
+        if (!commitOnly) await this.pullFromRemote(branch)
         await this.cleanupRepo(publishableFiles)
         await this.copyFilesToRepo(publishableFiles)
+        await this.commitAndPush(commitOnly, branch)
+    }
+
+    private async pullFromRemote(branch: string) {
+        try {
+            await GitHelper.pull(this.repoPath, branch)
+        } catch (error) {
+            throw new Error(`Cannot sync with remote: ${(error as Error).message}`)
+        }
+    }
+
+    private async commitAndPush(commitOnly: boolean, branch: string) {
+        try {
+            await GitHelper.add(this.repoPath)
+            await GitHelper.commit(this.repoPath, this.settings.commitMessage)
+            if (!commitOnly) {
+                await GitHelper.push(this.repoPath, branch)
+            }
+        } catch (error) {
+            console.error('Git operation failed:', error)
+            throw new Error(`Git operation failed: ${(error as Error).message}`)
+        }
     }
 
     /** Returns the diff between the published copy of a file and its current vault version. */
