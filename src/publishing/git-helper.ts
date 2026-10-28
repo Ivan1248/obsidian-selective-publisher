@@ -140,6 +140,37 @@ export class GitHelper {
         }
     }
 
+    /**
+     * Returns the paths of the files that match `pathspec`, relative to `repoPath`.
+     * Tracked paths are as the index stores them, which can differ in case from the working tree.
+     * Untracked files are included unless Git ignores them.
+     */
+    static async listFiles(repoPath: string, pathspec: string[]): Promise<string[]> {
+        try {
+            const { stdout } = await execFileAsync('git', [
+                'ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', ...pathspec,
+            ], { cwd: repoPath })
+            return stdout.split('\0').filter(filePath => filePath.length > 0)
+        } catch (error) {
+            this.handleGitError(repoPath, error, 'list files')
+        }
+    }
+
+    /**
+     * Removes the files that match `pathspec` from the working tree and the index,
+     * including untracked files unless Git ignores them.
+     */
+    static async removeFiles(repoPath: string, pathspec: string[]): Promise<void> {
+        try {
+            const options = { cwd: repoPath }
+            await execFileAsync('git', ['rm', '-rf', '-q', '--ignore-unmatch', '--', ...pathspec],
+                options)
+            await execFileAsync('git', ['clean', '-fd', '-q', '--', ...pathspec], options)
+        } catch (error) {
+            this.handleGitError(repoPath, error, 'remove files')
+        }
+    }
+
     static async diffFiles(repoPath: string, oldPath: string, newPath: string): Promise<FileDiff> {
         try {
             const { stdout } = await execFileAsync('git', ['diff', '--no-index', '--no-color', '--', oldPath, newPath], { cwd: repoPath })

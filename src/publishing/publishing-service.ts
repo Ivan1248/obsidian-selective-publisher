@@ -6,6 +6,9 @@ import { GitHelper } from './git-helper'
 import { FileDiff } from './diff-parser'
 import { SelectivePublisherSettings } from '../settings'
 
+/** Pathspec of the published files: all files except dot-files and the contents of dot-folders */
+const PUBLISHED_PATHSPEC = ['.', ':(exclude,glob)**/.*', ':(exclude,glob)**/.*/**']
+
 export enum FileUpdateStatus {
     New = 'new',
     Modified = 'modified',
@@ -45,17 +48,22 @@ export class PublishingService {
     }
 
     public async getPublishingStatuses(publishableFiles: TFile[]): Promise<FileWithStatus[]> {
+        const publishedPaths = await GitHelper.listFiles(this.repoPath, PUBLISHED_PATHSPEC)
+        const publishedPathSet = new Set(publishedPaths)
+
         // Statuses of the publishable files
+        // The Git listing decides whether a file is new, as the file system may ignore case
         const fileStatuses: FileWithStatus[] = await Promise.all(
             publishableFiles.map(async (file) => ({
                 path: file.path,
-                status: await this.getFileStatus(file, this.resolveRepoPath(file.path)),
+                status: publishedPathSet.has(file.path)
+                    ? await this.getFileStatus(file, this.resolveRepoPath(file.path))
+                    : FileUpdateStatus.New,
             }))
         )
 
         // Published files that are no longer publishable
         const publishablePaths = new Set(publishableFiles.map(f => f.path))
-        const publishedPaths = await this.getPublishedFiles()
         const deletedStatuses: FileWithStatus[] = publishedPaths
             .filter(publishedPath => !publishablePaths.has(publishedPath))
             .map(publishedPath => ({ path: publishedPath, status: FileUpdateStatus.Deleted }))
@@ -76,7 +84,8 @@ export class PublishingService {
     ): Promise<void> {
         // Pulling first avoids conflicts with changes made to the publishing branch elsewhere
         if (!commitOnly) await this.pullFromRemote(branch)
-        await this.cleanupRepo(publishableFiles)
+        // Without the index entries, `git add` records the vault's paths, also case-only renames
+        await GitHelper.removeFiles(this.repoPath, PUBLISHED_PATHSPEC)
         await this.copyFilesToRepo(publishableFiles)
         await this.commitAndPush(commitOnly, branch)
     }
@@ -126,50 +135,8 @@ export class PublishingService {
         return FileUpdateStatus.Unmodified
     }
 
-    private async getPublishedFiles(): Promise<string[]> {
-        try {
-            const publishedFiles: string[] = []
-            const repoPath = this.repoPath
-
-            async function scanDirectory(dir: string) {
-                const entries = await fs.readdir(dir, { withFileTypes: true })
-                for (const entry of entries) {
-                    const fullPath = path.join(dir, entry.name)
-                    // Dot-files and dot-directories, such as .git and .obsidian, are not published files
-                    if (entry.isDirectory() && !entry.name.startsWith('.')) {
-                        await scanDirectory(fullPath)
-                    } else if (entry.isFile() && !entry.name.startsWith('.')) {
-                        const relativePath = path.relative(repoPath, fullPath).replace(/\\/g, '/')
-                        publishedFiles.push(relativePath)
-                    }
-                }
-            }
-
-            await scanDirectory(repoPath)
-            return publishedFiles
-        } catch (error) {
-            console.error('Failed to scan publishing repo:', error)
-            return []
-        }
-    }
-
     private static processContent(content: string, file: TFile): string {
         return content
-    }
-
-    private async cleanupRepo(publishableFiles: TFile[]) {
-        try {
-            const publishablePaths = new Set(publishableFiles.map(f => f.path))
-            const publishedPaths = await this.getPublishedFiles()
-
-            for (const publishedPath of publishedPaths) {
-                if (!publishablePaths.has(publishedPath)) {
-                    await this.deleteFileFromRepo(publishedPath)
-                }
-            }
-        } catch (error) {
-            console.error('Cleanup failed:', error)
-        }
     }
 
     private async copyFilesToRepo(files: TFile[]) {
@@ -190,20 +157,6 @@ export class PublishingService {
         } else {
             const buffer = await this.app.vault.readBinary(file)
             await fs.writeFile(destPath, Buffer.from(buffer))
-        }
-    }
-
-    private async deleteFileFromRepo(relativePath: string) {
-        try {
-            const destPath = this.resolveRepoPath(relativePath)
-            try {
-                await fs.access(destPath)
-                await fs.unlink(destPath)
-            } catch {
-                // File doesn't exist, nothing to do
-            }
-        } catch (error) {
-            console.error(`Failed to delete ${relativePath}:`, error)
         }
     }
 }
